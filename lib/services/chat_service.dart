@@ -64,6 +64,13 @@ class ChatService {
     });
   }
 
+  /// Live stream of the whole thread doc — used by the Chats list screen
+  /// to show a last-message preview + unread badge without opening the
+  /// conversation. Returns null if no conversation has started yet.
+  Stream<Map<String, dynamic>?> threadData() {
+    return _threadRef.snapshots().map((snap) => snap.exists ? snap.data() : null);
+  }
+
   Future<void> send(String text) async {
     final threadSnap = await _threadRef.get();
 

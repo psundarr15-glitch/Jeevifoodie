@@ -7,6 +7,7 @@ import '../screens/restaurant/restaurant_list_screen.dart';
 import '../screens/cart/cart_screen.dart';
 import '../screens/orders/orders_screen.dart';
 import '../screens/profile/profile_screen.dart';
+import '../screens/chat/chats_list_screen.dart';
 
 class RootShell extends StatefulWidget {
   final int initialIndex;
@@ -23,6 +24,7 @@ class _RootShellState extends State<RootShell> {
     const HomeScreen(),
     const RestaurantListScreen(),
     const OrdersScreen(),
+    const ChatsListScreen(),
     const CartScreen(),
     const ProfileScreen(),
   ];
@@ -41,6 +43,7 @@ class _RootShellState extends State<RootShell> {
           NavigationDestination(icon: const Icon(Icons.home_outlined), selectedIcon: const Icon(Icons.home), label: t.navHome),
           NavigationDestination(icon: const Icon(Icons.search), selectedIcon: const Icon(Icons.search), label: t.navSearch),
           NavigationDestination(icon: const Icon(Icons.receipt_long_outlined), selectedIcon: const Icon(Icons.receipt_long), label: t.navOrders),
+          NavigationDestination(icon: const Icon(Icons.chat_bubble_outline), selectedIcon: const Icon(Icons.chat_bubble), label: t.navChats),
           NavigationDestination(
             icon: Badge(
               label: Text('$cartCount'),

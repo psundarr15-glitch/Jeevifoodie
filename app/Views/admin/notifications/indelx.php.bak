@@ -1,0 +1,244 @@
+<?= $this->extend('admin/layouts/main') ?>
+<?= $this->section('content') ?>
+
+<h3 class="section-title mb-4">Push Notification</h3>
+
+<?php if (session()->getFlashdata('success')): ?>
+    <div class="alert alert-success alert-dismissible fade show" role="alert">
+        <i class="bi bi-check-circle-fill me-2"></i>
+        <?= esc(session()->getFlashdata('success')) ?>
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+<?php endif; ?>
+
+<?php if (session()->getFlashdata('error')): ?>
+    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+        <i class="bi bi-exclamation-triangle-fill me-2"></i>
+        <?= esc(session()->getFlashdata('error')) ?>
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+<?php endif; ?>
+
+<div class="card card-jeevi p-4 mb-4" style="max-width: 600px;">
+
+    <h6 class="fw-bold mb-3">
+        Send to all customers
+    </h6>
+
+    <p class="text-muted small mb-3">
+        Sends an instant push notification to every customer who has the
+        app installed and notifications enabled. Use this for general
+        offers and announcements.
+    </p>
+
+    <form
+        method="post"
+        action="<?= base_url('admin/notifications/send') ?>"
+        enctype="multipart/form-data"
+        id="notificationForm"
+    >
+
+        <?= csrf_field() ?>
+
+        <!-- Title -->
+        <div class="mb-3">
+
+            <label class="form-label fw-semibold">
+                Title
+            </label>
+
+            <input
+                type="text"
+                name="title"
+                class="form-control"
+                value="<?= old('title', 'JEEVI30 – 30% OFF 🎉') ?>"
+                placeholder="e.g. Flat 30% OFF today!"
+                maxlength="60"
+                required
+            >
+
+        </div>
+
+        <!-- Message -->
+        <div class="mb-3">
+
+            <label class="form-label fw-semibold">
+                Message
+            </label>
+
+            <textarea
+                name="body"
+                class="form-control"
+                rows="4"
+                maxlength="150"
+                required
+            ><?= old(
+                'body',
+                '🍔 உங்கள் பிடித்த உணவை இப்போது 30% OFF தள்ளுபடியில் ஆர்டர் செய்யுங்கள்! 🎁 Promo Code: JEEVI30 – இன்றே ஆர்டர் செய்யுங்கள்!'
+            ) ?></textarea>
+
+            <div class="form-text">
+                Maximum 150 characters.
+            </div>
+
+        </div>
+
+        <!-- Banner Image -->
+        <div class="mb-3">
+
+            <label class="form-label fw-semibold">
+                Banner image (optional)
+            </label>
+
+            <input
+                type="file"
+                name="image"
+                id="notificationImage"
+                class="form-control"
+                accept="image/jpeg,image/jpg,image/png,image/webp"
+            >
+
+            <div class="form-text">
+                JPG, JPEG, PNG or WebP only. Maximum file size: <strong>300 KB</strong>.
+            </div>
+
+            <!-- Image Preview -->
+            <div id="imagePreviewContainer" class="mt-3 d-none">
+
+                <img
+                    id="imagePreview"
+                    src=""
+                    alt="Preview"
+                    class="img-fluid rounded border"
+                    style="max-height: 250px; width: 100%; object-fit: cover;"
+                >
+
+                <div
+                    id="imageSize"
+                    class="small text-muted mt-2"
+                ></div>
+
+            </div>
+
+        </div>
+
+        <!-- Send Button -->
+        <button
+            type="submit"
+            class="btn btn-jeevi w-100"
+            id="sendButton"
+        >
+
+            <i class="bi bi-send-fill me-2"></i>
+            Send Notification
+
+        </button>
+
+    </form>
+
+</div>
+
+
+<script>
+
+document.addEventListener('DOMContentLoaded', function () {
+
+    const imageInput = document.getElementById('notificationImage');
+    const previewContainer = document.getElementById('imagePreviewContainer');
+    const preview = document.getElementById('imagePreview');
+    const imageSize = document.getElementById('imageSize');
+    const form = document.getElementById('notificationForm');
+    const sendButton = document.getElementById('sendButton');
+
+    const MAX_SIZE = 300 * 1024; // 300 KB
+
+    imageInput.addEventListener('change', function () {
+
+        const file = this.files[0];
+
+        if (!file) {
+            previewContainer.classList.add('d-none');
+            return;
+        }
+
+        // Check file size
+        if (file.size > MAX_SIZE) {
+
+            alert('Image size must not exceed 300 KB.');
+
+            this.value = '';
+
+            previewContainer.classList.add('d-none');
+
+            return;
+        }
+
+        // Check file type
+        const allowedTypes = [
+            'image/jpeg',
+            'image/jpg',
+            'image/png',
+            'image/webp'
+        ];
+
+        if (!allowedTypes.includes(file.type)) {
+
+            alert('Only JPG, JPEG, PNG and WebP images are allowed.');
+
+            this.value = '';
+
+            previewContainer.classList.add('d-none');
+
+            return;
+        }
+
+        // Preview
+        const reader = new FileReader();
+
+        reader.onload = function (event) {
+
+            preview.src = event.target.result;
+
+            previewContainer.classList.remove('d-none');
+
+            const sizeKB = (file.size / 1024).toFixed(2);
+
+            imageSize.innerHTML =
+                'Selected image: <strong>' +
+                sizeKB +
+                ' KB</strong>';
+
+        };
+
+        reader.readAsDataURL(file);
+
+    });
+
+
+    // Final client-side validation
+    form.addEventListener('submit', function (event) {
+
+        const file = imageInput.files[0];
+
+        if (file && file.size > MAX_SIZE) {
+
+            event.preventDefault();
+
+            alert('Image size must not exceed 300 KB.');
+
+            return false;
+        }
+
+        sendButton.disabled = true;
+
+        sendButton.innerHTML =
+            '<span class="spinner-border spinner-border-sm me-2"></span>' +
+            'Sending...';
+
+    });
+
+});
+
+</script>
+
+<?= $this->endSection() ?>

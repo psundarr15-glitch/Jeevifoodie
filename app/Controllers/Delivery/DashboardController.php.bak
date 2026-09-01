@@ -1,0 +1,159 @@
+<?php
+
+namespace App\Controllers\Delivery;
+
+use App\Controllers\BaseController;
+use App\Models\OrderModel;
+use App\Models\OrderTrackingModel;
+use App\Models\DeliveryPartnerModel;
+
+class DashboardController extends BaseController
+{
+    public function index()
+    {
+        $partnerId = session()->get('partner_id');
+        $orderModel = new OrderModel();
+
+        $baseQuery = 'orders.*, users.name as customer_name, users.phone as customer_phone, restaurants.name as restaurant_name';
+
+        // New orders that haven't been accepted by anyone yet — broadcast to
+        // every available partner. These trigger the "Accept Order" popup.
+        $pendingOrders = $orderModel->select($baseQuery)
+                                     ->join('users', 'users.id = orders.user_id')
+                                     ->join('restaurants', 'restaurants.id = orders.restaurant_id')
+                                     ->where('orders.order_status', 'placed')
+                                     ->where('orders.delivery_partner_id', null)
+                                     ->orderBy('orders.id', 'ASC')
+                                     ->findAll();
+
+        // Orders already accepted (confirmed or further along) and not yet finished
+        $activeOrders = $orderModel->select($baseQuery)
+                                    ->join('users', 'users.id = orders.user_id')
+                                    ->join('restaurants', 'restaurants.id = orders.restaurant_id')
+                                    ->where('orders.delivery_partner_id', $partnerId)
+                                    ->whereNotIn('orders.order_status', ['placed', 'delivered', 'cancelled'])
+                                    ->orderBy('orders.id', 'DESC')
+                                    ->findAll();
+
+        $completedToday = $orderModel->where('delivery_partner_id', $partnerId)
+                                      ->where('order_status', 'delivered')
+                                      ->where('DATE(delivered_at)', date('Y-m-d'))
+                                      ->countAllResults();
+
+        return view('delivery/dashboard', [
+            'pendingOrders'   => $pendingOrders,
+            'orders'          => $activeOrders,
+            'completed_today' => $completedToday,
+        ]);
+    }
+
+    /**
+     * The delivery partner taps "Accept Order" in the popup. The order was
+     * broadcast unassigned (delivery_partner_id IS NULL) to every partner,
+     * so this claims it — atomically, so if two partners tap Accept at
+     * nearly the same moment, only the first one actually gets it.
+     */
+    public function acceptOrder($orderId)
+    {
+        $partnerId = session()->get('partner_id');
+        $orderModel = new OrderModel();
+        $trackingModel = new OrderTrackingModel();
+
+        $order = $orderModel->find($orderId);
+        if (! $order || $order['order_status'] !== 'placed') {
+            return redirect()->to('/delivery/dashboard')->with('error', 'This order is no longer available.');
+        }
+
+        if ($order['delivery_partner_id'] !== null && $order['delivery_partner_id'] != $partnerId) {
+            return redirect()->to('/delivery/dashboard')->with('error', 'Another partner already accepted this order.');
+        }
+
+        $db = \Config\Database::connect();
+        $db->table('orders')
+           ->where('id', $orderId)
+           ->where('delivery_partner_id', null)
+           ->update(['delivery_partner_id' => $partnerId, 'order_status' => 'confirmed']);
+
+        if ($db->affectedRows() === 0) {
+            return redirect()->to('/delivery/dashboard')->with('error', 'Another partner already accepted this order.');
+        }
+
+        $trackingModel->insert([
+            'order_id' => $orderId,
+            'status'   => 'confirmed',
+            'note'     => 'Order accepted by delivery partner.',
+        ]);
+
+        return redirect()->to('/delivery/dashboard')->with('success', 'Order accepted!');
+    }
+
+    /**
+     * Called from the dashboard when the partner taps "Update Status" on an order.
+     */
+    public function updateStatus($orderId)
+    {
+        $partnerId = session()->get('partner_id');
+        $orderModel = new OrderModel();
+        $trackingModel = new OrderTrackingModel();
+
+        $order = $orderModel->find($orderId);
+        if (! $order || $order['delivery_partner_id'] != $partnerId) {
+            return redirect()->to('/delivery/dashboard')->with('error', 'Order not found.');
+        }
+
+        $status = $this->request->getPost('order_status');
+
+        $updateData = ['order_status' => $status];
+        if ($status === 'delivered') {
+            $updateData['delivered_at'] = date('Y-m-d H:i:s');
+        }
+        $orderModel->update($orderId, $updateData);
+
+        $trackingModel->insert([
+            'order_id' => $orderId,
+            'status'   => $status,
+            'note'     => ucfirst(str_replace('_', ' ', $status)) . ' by delivery partner.',
+        ]);
+
+        return redirect()->to('/delivery/dashboard')->with('success', 'Order status updated.');
+    }
+
+    /**
+     * AJAX endpoint polled by the dashboard's geolocation watcher.
+     * Updates the partner's live position and logs it against every
+     * order currently assigned to them that's out for delivery, so the
+     * customer's live tracking map moves in near-real-time.
+     */
+    public function updateLocation()
+    {
+        $partnerId = session()->get('partner_id');
+        $lat = $this->request->getPost('lat');
+        $lng = $this->request->getPost('lng');
+
+        if (! $lat || ! $lng) {
+            return $this->response->setJSON(['success' => false, 'message' => 'Missing coordinates']);
+        }
+
+        $partnerModel = new DeliveryPartnerModel();
+        $partnerModel->update($partnerId, ['current_lat' => $lat, 'current_lng' => $lng]);
+
+        $orderModel = new OrderModel();
+        $trackingModel = new OrderTrackingModel();
+
+        $activeOrders = $orderModel->where('delivery_partner_id', $partnerId)
+                                    ->where('order_status', 'out_for_delivery')
+                                    ->findAll();
+
+        foreach ($activeOrders as $order) {
+            $trackingModel->insert([
+                'order_id' => $order['id'],
+                'status'   => 'out_for_delivery',
+                'lat'      => $lat,
+                'lng'      => $lng,
+                'note'     => 'Live location update',
+            ]);
+        }
+
+        return $this->response->setJSON(['success' => true, 'orders_updated' => count($activeOrders)]);
+    }
+}

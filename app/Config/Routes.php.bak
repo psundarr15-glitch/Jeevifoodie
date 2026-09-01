@@ -1,0 +1,102 @@
+<?php
+
+use CodeIgniter\Router\RouteCollection;
+
+/**
+ * @var RouteCollection $routes
+ */
+
+// ==================== CUSTOMER-FACING ROUTES ====================
+$routes->get('/', 'Customer\HomeController::index');
+
+$routes->get('login', 'Customer\AuthController::showLogin');
+$routes->post('login', 'Customer\AuthController::login');
+$routes->get('register', 'Customer\AuthController::showRegister');
+$routes->post('register', 'Customer\AuthController::register');
+$routes->get('logout', 'Customer\AuthController::logout');
+
+$routes->get('restaurants', 'Customer\RestaurantController::index');
+$routes->get('restaurants/(:num)', 'Customer\RestaurantController::view/$1');
+
+// Routes requiring a logged-in customer
+$routes->group('', ['filter' => 'auth'], static function ($routes) {
+    $routes->get('cart', 'Customer\CartController::view');
+    $routes->post('cart/add', 'Customer\CartController::add');
+    $routes->post('cart/update', 'Customer\CartController::update');
+    $routes->get('cart/remove/(:num)', 'Customer\CartController::remove/$1');
+
+    $routes->get('checkout', 'Customer\CheckoutController::index');
+    $routes->post('checkout/apply-coupon', 'Customer\CheckoutController::applyCoupon');
+    $routes->post('checkout/place-order', 'Customer\CheckoutController::placeOrder');
+
+    $routes->get('orders', 'Customer\OrderController::myOrders');
+    $routes->get('order/track/(:segment)', 'Customer\OrderController::track/$1');
+
+    $routes->get('profile', 'Customer\ProfileController::index');
+    $routes->post('profile/update', 'Customer\ProfileController::updateProfile');
+    $routes->post('profile/address/add', 'Customer\ProfileController::addAddress');
+    $routes->get('profile/address/default/(:num)', 'Customer\ProfileController::setDefaultAddress/$1');
+    $routes->get('profile/address/delete/(:num)', 'Customer\ProfileController::deleteAddress/$1');
+});
+
+// Live tracking JSON API (polled by the tracking page)
+$routes->get('api/track/(:segment)', 'Api\TrackingApiController::status/$1');
+
+// ==================== DELIVERY PARTNER ====================
+$routes->get('delivery/login', 'Delivery\AuthController::showLogin');
+$routes->post('delivery/login', 'Delivery\AuthController::login');
+$routes->get('delivery/logout', 'Delivery\AuthController::logout');
+
+$routes->group('delivery', ['filter' => 'deliveryAuth'], static function ($routes) {
+    $routes->get('dashboard', 'Delivery\DashboardController::index');
+    $routes->post('orders/(:num)/accept', 'Delivery\DashboardController::acceptOrder/$1');
+    $routes->post('orders/(:num)/reject', 'Delivery\DashboardController::rejectOrder/$1');
+    $routes->post('orders/(:num)/update-status', 'Delivery\DashboardController::updateStatus/$1');
+    $routes->post('update-location', 'Delivery\DashboardController::updateLocation');
+});
+
+// ==================== ADMIN / RESTAURANT PANEL ====================
+$routes->get('admin/login', 'Admin\AuthController::showLogin');
+$routes->post('admin/login', 'Admin\AuthController::login');
+$routes->get('admin/logout', 'Admin\AuthController::logout');
+
+$routes->group('admin', ['filter' => 'adminAuth'], static function ($routes) {
+    $routes->get('dashboard', 'Admin\DashboardController::index');
+
+    $routes->get('restaurants', 'Admin\RestaurantController::index');
+    $routes->get('restaurants/create', 'Admin\RestaurantController::create');
+    $routes->post('restaurants/store', 'Admin\RestaurantController::store');
+    $routes->get('restaurants/edit/(:num)', 'Admin\RestaurantController::edit/$1');
+    $routes->post('restaurants/update/(:num)', 'Admin\RestaurantController::update/$1');
+    $routes->get('restaurants/delete/(:num)', 'Admin\RestaurantController::delete/$1');
+
+    $routes->get('menu-items', 'Admin\MenuItemController::index');
+    $routes->get('menu-items/create', 'Admin\MenuItemController::create');
+    $routes->post('menu-items/store', 'Admin\MenuItemController::store');
+    $routes->get('menu-items/edit/(:num)', 'Admin\MenuItemController::edit/$1');
+    $routes->post('menu-items/update/(:num)', 'Admin\MenuItemController::update/$1');
+    $routes->get('menu-items/delete/(:num)', 'Admin\MenuItemController::delete/$1');
+
+    $routes->get('categories', 'Admin\CategoryController::index');
+    $routes->post('categories/store', 'Admin\CategoryController::store');
+    $routes->get('categories/delete/(:num)', 'Admin\CategoryController::delete/$1');
+
+    $routes->get('coupons', 'Admin\CouponController::index');
+    $routes->post('coupons/store', 'Admin\CouponController::store');
+    $routes->get('coupons/toggle/(:num)', 'Admin\CouponController::toggle/$1');
+    $routes->get('coupons/delete/(:num)', 'Admin\CouponController::delete/$1');
+
+    $routes->get('orders', 'Admin\OrderController::index');
+    $routes->get('orders/(:num)', 'Admin\OrderController::view/$1');
+    $routes->post('orders/(:num)/update-status', 'Admin\OrderController::updateStatus/$1');
+
+    $routes->get('delivery-partners', 'Admin\DeliveryPartnerController::index');
+    $routes->post('delivery-partners/store', 'Admin\DeliveryPartnerController::store');
+    $routes->get('delivery-partners/delete/(:num)', 'Admin\DeliveryPartnerController::delete/$1');
+
+    $routes->get('users', 'Admin\UserController::index');
+    $routes->get('users/(:num)', 'Admin\UserController::view/$1');
+    $routes->get('users/edit/(:num)', 'Admin\UserController::edit/$1');
+    $routes->post('users/update/(:num)', 'Admin\UserController::update/$1');
+    $routes->get('users/delete/(:num)', 'Admin\UserController::delete/$1');
+});

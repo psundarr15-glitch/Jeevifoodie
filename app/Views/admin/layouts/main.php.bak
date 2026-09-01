@@ -1,0 +1,661 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title><?= $title ?? 'Jeevi Admin' ?></title>
+
+    <!-- Bootstrap -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+
+    <!-- Bootstrap Icons -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+
+    <!-- Main CSS -->
+    <link href="<?= base_url('assets/css/style.css') ?>" rel="stylesheet">
+
+    <style>
+        :root {
+            --jeevi-red: #e63946;
+            --jeevi-red-dark: #c92f3b;
+            --sidebar-bg: #111827;
+            --sidebar-hover: #1f2937;
+            --sidebar-text: #9ca3af;
+            --sidebar-active: #ffffff;
+            --page-bg: #f5f7fb;
+            --border-color: #e5e7eb;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            background: var(--page-bg);
+            font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont,
+                         "Segoe UI", sans-serif;
+            color: #1f2937;
+        }
+
+        /* =========================
+           SIDEBAR
+        ========================= */
+
+        .admin-wrapper {
+            min-height: 100vh;
+        }
+
+        .admin-sidebar {
+            width: 255px;
+            min-height: 100vh;
+            background: var(--sidebar-bg);
+            position: fixed;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            z-index: 1050;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 4px 0 20px rgba(0, 0, 0, .08);
+            transition: .3s ease;
+        }
+
+        /* Logo */
+
+        .sidebar-logo {
+            height: 75px;
+            padding: 18px 22px;
+            display: flex;
+            align-items: center;
+            border-bottom: 1px solid rgba(255,255,255,.07);
+        }
+
+        .sidebar-logo img {
+            max-height: 38px;
+            max-width: 175px;
+            object-fit: contain;
+        }
+
+        .brand-text {
+            color: #fff;
+            font-size: 20px;
+            font-weight: 800;
+            letter-spacing: .4px;
+        }
+
+        .brand-subtitle {
+            display: block;
+            color: #6b7280;
+            font-size: 10px;
+            margin-top: -2px;
+            letter-spacing: 1px;
+        }
+
+        /* Navigation */
+
+        .sidebar-menu {
+            flex: 1;
+            padding: 18px 12px;
+            overflow-y: auto;
+        }
+
+        .menu-title {
+            color: #6b7280;
+            font-size: 10px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1.2px;
+            padding: 0 12px;
+            margin: 8px 0 10px;
+        }
+
+        .admin-sidebar a {
+            color: var(--sidebar-text);
+            display: flex;
+            align-items: center;
+            gap: 13px;
+            padding: 11px 13px;
+            margin: 4px 0;
+            text-decoration: none;
+            border-radius: 10px;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all .2s ease;
+            position: relative;
+        }
+
+        .admin-sidebar a i {
+            width: 20px;
+            text-align: center;
+            font-size: 17px;
+            transition: .2s ease;
+        }
+
+        .admin-sidebar a:hover {
+            background: var(--sidebar-hover);
+            color: #fff;
+            transform: translateX(2px);
+        }
+
+        .admin-sidebar a:hover i {
+            color: var(--jeevi-red);
+        }
+
+        .admin-sidebar a.active {
+            background: linear-gradient(
+                135deg,
+                var(--jeevi-red),
+                var(--jeevi-red-dark)
+            );
+            color: #fff;
+            box-shadow: 0 6px 16px rgba(230,57,70,.25);
+        }
+
+        .admin-sidebar a.active i {
+            color: #fff;
+        }
+
+        /* Sidebar Footer */
+
+        .sidebar-footer {
+            padding: 14px 12px;
+            border-top: 1px solid rgba(255,255,255,.07);
+        }
+
+        .admin-user {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px;
+            margin-bottom: 8px;
+            background: rgba(255,255,255,.04);
+            border-radius: 10px;
+        }
+
+        .admin-avatar {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: var(--jeevi-red);
+            color: #fff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 14px;
+        }
+
+        .admin-user-name {
+            color: #fff;
+            font-size: 13px;
+            font-weight: 600;
+        }
+
+        .admin-user-role {
+            color: #6b7280;
+            font-size: 10px;
+            margin-top: 1px;
+        }
+
+        .logout-link {
+            color: #f87171 !important;
+        }
+
+        .logout-link:hover {
+            background: rgba(239,68,68,.1) !important;
+            color: #fca5a5 !important;
+        }
+
+        /* =========================
+           MAIN CONTENT
+        ========================= */
+
+        .admin-main {
+            margin-left: 255px;
+            min-height: 100vh;
+            transition: .3s ease;
+        }
+
+        .topbar {
+            height: 75px;
+            background: #fff;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 28px;
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+        }
+
+        .page-heading {
+            font-size: 18px;
+            font-weight: 700;
+            color: #111827;
+            margin: 0;
+        }
+
+        .page-subtitle {
+            font-size: 12px;
+            color: #9ca3af;
+            margin-top: 2px;
+        }
+
+        .mobile-menu-btn {
+            width: 40px;
+            height: 40px;
+            border: 0;
+            border-radius: 9px;
+            background: #f3f4f6;
+            color: #374151;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+        }
+
+        .content-area {
+            padding: 28px;
+        }
+
+        /* =========================
+           ALERTS
+        ========================= */
+
+        .alert {
+            border: 0;
+            border-radius: 12px;
+            padding: 13px 16px;
+            font-size: 14px;
+            box-shadow: 0 4px 14px rgba(0,0,0,.04);
+        }
+
+        .alert-success {
+            background: #ecfdf3;
+            color: #166534;
+        }
+
+        .alert-danger {
+            background: #fef2f2;
+            color: #991b1b;
+        }
+
+        /* =========================
+           MOBILE OVERLAY
+        ========================= */
+
+        .sidebar-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,.45);
+            z-index: 1040;
+        }
+
+        /* =========================
+           RESPONSIVE
+        ========================= */
+
+        @media (max-width: 991px) {
+
+            .admin-sidebar {
+                transform: translateX(-100%);
+            }
+
+            .admin-sidebar.show {
+                transform: translateX(0);
+            }
+
+            .admin-main {
+                margin-left: 0;
+            }
+
+            .mobile-menu-btn {
+                display: flex;
+            }
+
+            .sidebar-overlay.show {
+                display: block;
+            }
+
+            .topbar {
+                padding: 0 18px;
+            }
+
+            .content-area {
+                padding: 20px 16px;
+            }
+        }
+
+        @media (max-width: 576px) {
+
+            .topbar {
+                height: 65px;
+            }
+
+            .page-heading {
+                font-size: 16px;
+            }
+
+            .page-subtitle {
+                display: none;
+            }
+
+            .content-area {
+                padding: 16px 12px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+<div class="admin-wrapper">
+
+    <!-- =========================
+         SIDEBAR
+    ========================== -->
+
+    <aside class="admin-sidebar" id="adminSidebar">
+
+        <!-- Logo -->
+        <div class="sidebar-logo">
+
+            <img
+                src="<?= base_url('assets/img/logo.svg') ?>"
+                alt="Jeevi Admin"
+            >
+
+        </div>
+
+        <!-- Navigation -->
+        <div class="sidebar-menu">
+
+            <div class="menu-title">
+                Main Menu
+            </div>
+
+            <?php
+                $currentUrl = uri_string();
+            ?>
+
+            <a
+                href="<?= base_url('admin/dashboard') ?>"
+                class="<?= $currentUrl === 'admin/dashboard' ? 'active' : '' ?>"
+            >
+                <i class="bi bi-grid-1x2-fill"></i>
+                <span>Dashboard</span>
+            </a>
+
+            <a
+                href="<?= base_url('admin/orders') ?>"
+                class="<?= str_starts_with($currentUrl, 'admin/orders') ? 'active' : '' ?>"
+            >
+                <i class="bi bi-bag-check-fill"></i>
+                <span>Orders</span>
+            </a>
+
+            <a
+                href="<?= base_url('admin/restaurants') ?>"
+                class="<?= str_starts_with($currentUrl, 'admin/restaurants') ? 'active' : '' ?>"
+            >
+                <i class="bi bi-shop"></i>
+                <span>Restaurants</span>
+            </a>
+
+            <a
+                href="<?= base_url('admin/menu-items') ?>"
+                class="<?= str_starts_with($currentUrl, 'admin/menu-items') ? 'active' : '' ?>"
+            >
+                <i class="bi bi-egg-fried"></i>
+                <span>Menu Items</span>
+            </a>
+
+            <?php if (session()->get('admin_role') !== 'restaurant_manager'): ?>
+
+                <div class="menu-title mt-4">
+                    Management
+                </div>
+
+                <a
+                    href="<?= base_url('admin/categories') ?>"
+                    class="<?= str_starts_with($currentUrl, 'admin/categories') ? 'active' : '' ?>"
+                >
+                    <i class="bi bi-tags-fill"></i>
+                    <span>Categories</span>
+                </a>
+
+                <a
+                    href="<?= base_url('admin/coupons') ?>"
+                    class="<?= str_starts_with($currentUrl, 'admin/coupons') ? 'active' : '' ?>"
+                >
+                    <i class="bi bi-ticket-perforated-fill"></i>
+                    <span>Coupons</span>
+                </a>
+
+                <a
+                    href="<?= base_url('admin/notifications') ?>"
+                    class="<?= str_starts_with($currentUrl, 'admin/notifications') ? 'active' : '' ?>"
+                >
+                    <i class="bi bi-bell-fill"></i>
+                    <span>Notifications</span>
+                </a>
+
+                <a
+                    href="<?= base_url('admin/delivery-partners') ?>"
+                    class="<?= str_starts_with($currentUrl, 'admin/delivery-partners') ? 'active' : '' ?>"
+                >
+                    <i class="bi bi-bicycle"></i>
+                    <span>Delivery Partners</span>
+                </a>
+
+                <a
+                    href="<?= base_url('admin/users') ?>"
+                    class="<?= str_starts_with($currentUrl, 'admin/users') ? 'active' : '' ?>"
+                >
+                    <i class="bi bi-people-fill"></i>
+                    <span>Customers</span>
+                </a>
+
+                <a
+                    href="<?= base_url('admin/managers') ?>"
+                    class="<?= str_starts_with($currentUrl, 'admin/managers') ? 'active' : '' ?>"
+                >
+                    <i class="bi bi-person-badge-fill"></i>
+                    <span>Restaurant Managers</span>
+                </a>
+
+            <?php endif; ?>
+
+        </div>
+
+        <!-- Footer -->
+        <div class="sidebar-footer">
+
+            <?php
+                $adminName = session()->get('admin_name') ?? 'Administrator';
+                $adminRole = session()->get('admin_role') ?? 'Admin';
+                $initial = strtoupper(substr($adminName, 0, 1));
+            ?>
+
+            <div class="admin-user">
+
+                <div class="admin-avatar">
+                    <?= esc($initial) ?>
+                </div>
+
+                <div>
+                    <div class="admin-user-name">
+                        <?= esc($adminName) ?>
+                    </div>
+
+                    <div class="admin-user-role">
+                        <?= esc(ucwords(str_replace('_', ' ', $adminRole))) ?>
+                    </div>
+                </div>
+
+            </div>
+
+            <a
+                href="<?= base_url('admin/logout') ?>"
+                class="logout-link"
+            >
+                <i class="bi bi-box-arrow-right"></i>
+                <span>Logout</span>
+            </a>
+
+        </div>
+
+    </aside>
+
+
+    <!-- Mobile Overlay -->
+    <div
+        class="sidebar-overlay"
+        id="sidebarOverlay"
+        onclick="closeSidebar()"
+    ></div>
+
+
+    <!-- =========================
+         MAIN
+    ========================== -->
+
+    <main class="admin-main">
+
+        <!-- Topbar -->
+        <header class="topbar">
+
+            <div class="d-flex align-items-center gap-3">
+
+                <button
+                    type="button"
+                    class="mobile-menu-btn"
+                    onclick="toggleSidebar()"
+                >
+                    <i class="bi bi-list"></i>
+                </button>
+
+                <div>
+                    <h1 class="page-heading">
+                        <?= $title ?? 'Jeevi Admin' ?>
+                    </h1>
+
+                    <div class="page-subtitle">
+                        Manage your Jeevi Foodie Delivery
+                    </div>
+                </div>
+
+            </div>
+
+            <div class="d-flex align-items-center gap-2">
+
+                <div
+                    class="rounded-circle d-flex align-items-center justify-content-center"
+                    style="
+                        width:40px;
+                        height:40px;
+                        background:#fff1f2;
+                        color:#e63946;
+                    "
+                >
+                    <i class="bi bi-person-fill"></i>
+                </div>
+
+            </div>
+
+        </header>
+
+
+        <!-- Content -->
+        <div class="content-area">
+
+            <?php if (session()->getFlashdata('success')): ?>
+
+                <div
+                    class="alert alert-success d-flex align-items-center gap-2 mb-4"
+                    role="alert"
+                >
+                    <i class="bi bi-check-circle-fill"></i>
+
+                    <span>
+                        <?= esc(session()->getFlashdata('success')) ?>
+                    </span>
+                </div>
+
+            <?php endif; ?>
+
+
+            <?php if (session()->getFlashdata('error')): ?>
+
+                <div
+                    class="alert alert-danger d-flex align-items-center gap-2 mb-4"
+                    role="alert"
+                >
+                    <i class="bi bi-exclamation-triangle-fill"></i>
+
+                    <span>
+                        <?= esc(session()->getFlashdata('error')) ?>
+                    </span>
+                </div>
+
+            <?php endif; ?>
+
+
+            <?= $this->renderSection('content') ?>
+
+        </div>
+
+    </main>
+
+</div>
+
+
+<!-- Bootstrap JS -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
+
+<script>
+
+    function toggleSidebar() {
+
+        const sidebar = document.getElementById('adminSidebar');
+        const overlay = document.getElementById('sidebarOverlay');
+
+        sidebar.classList.toggle('show');
+        overlay.classList.toggle('show');
+
+    }
+
+
+    function closeSidebar() {
+
+        const sidebar = document.getElementById('adminSidebar');
+        const overlay = document.getElementById('sidebarOverlay');
+
+        sidebar.classList.remove('show');
+        overlay.classList.remove('show');
+
+    }
+
+
+    // Close sidebar when clicking a menu item on mobile
+    document.querySelectorAll('.admin-sidebar a').forEach(function(link) {
+
+        link.addEventListener('click', function() {
+
+            if (window.innerWidth <= 991) {
+                closeSidebar();
+            }
+
+        });
+
+    });
+
+</script>
+
+</body>
+</html>

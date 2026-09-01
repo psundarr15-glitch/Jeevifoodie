@@ -94,6 +94,26 @@ class _ChatScreenState extends State<ChatScreen> {
     }
   }
 
+  /// "Today" / "Yesterday" / a short date — used as the sticky-looking
+  /// separator pill between groups of messages sent on different days.
+  String _dayLabel(DateTime d) {
+    final now = DateTime.now();
+    final that = DateTime(d.year, d.month, d.day);
+    final today = DateTime(now.year, now.month, now.day);
+    final diff = today.difference(that).inDays;
+    if (diff == 0) return 'Today';
+    if (diff == 1) return 'Yesterday';
+    return '${d.day}/${d.month}/${d.year}';
+  }
+
+  String _timeLabel(DateTime? d) {
+    if (d == null) return '';
+    final h = d.hour % 12 == 0 ? 12 : d.hour % 12;
+    final m = d.minute.toString().padLeft(2, '0');
+    final ampm = d.hour >= 12 ? 'PM' : 'AM';
+    return '$h:$m $ampm';
+  }
+
   @override
   Widget build(BuildContext context) {
     final t = AppLocalizations.of(context)!;
@@ -103,7 +123,43 @@ class _ChatScreenState extends State<ChatScreen> {
     return Scaffold(
       backgroundColor: const Color(0xFFFFF3EC),
       appBar: AppBar(
-        title: Text(title),
+        titleSpacing: 0,
+        title: Row(
+          children: [
+            CircleAvatar(
+              backgroundColor: AppTheme.primary,
+              child: Icon(widget.restaurantId != null ? Icons.storefront : Icons.support_agent, color: Colors.white, size: 20),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Flexible(child: Text(title, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 16))),
+                      if (widget.restaurantId == null) ...[
+                        const SizedBox(width: 4),
+                        const Icon(Icons.verified, size: 15, color: AppTheme.primary),
+                      ],
+                    ],
+                  ),
+                  if (!_connecting && _connectError == null)
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Container(width: 7, height: 7, decoration: const BoxDecoration(color: Colors.green, shape: BoxShape.circle)),
+                        const SizedBox(width: 4),
+                        Text('Online', style: TextStyle(fontSize: 11.5, color: Colors.grey.shade600)),
+                      ],
+                    ),
+                ],
+              ),
+            ),
+          ],
+        ),
         actions: [
           if (!_connecting && _connectError == null)
             StreamBuilder<String?>(
@@ -111,9 +167,10 @@ class _ChatScreenState extends State<ChatScreen> {
               builder: (context, statusSnap) {
                 final isOpen = statusSnap.data != 'closed';
                 if (!isOpen) return const SizedBox.shrink();
-                return TextButton(
+                return IconButton(
+                  tooltip: t.chatEndAction,
+                  icon: const Icon(Icons.more_vert),
                   onPressed: () => _confirmEndChat(t),
-                  child: Text(t.chatEndAction, style: const TextStyle(color: Colors.white)),
                 );
               },
             ),
@@ -150,29 +207,80 @@ class _ChatScreenState extends State<ChatScreen> {
                             );
                           }
                           _scrollToBottomSoon();
-                          return ListView.builder(
+
+                          // Flatten into a list of either a date-separator
+                          // pill or a message bubble, one day-pill each
+                          // time the calendar day changes going forward.
+                          final rows = <Widget>[];
+                          DateTime? lastDay;
+                          for (final m in messages) {
+                            final createdAt = m.createdAt;
+                            if (createdAt != null) {
+                              final day = DateTime(createdAt.year, createdAt.month, createdAt.day);
+                              if (lastDay == null || day != lastDay) {
+                                rows.add(Center(
+                                  child: Container(
+                                    margin: const EdgeInsets.symmetric(vertical: 10),
+                                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                                    decoration: BoxDecoration(color: Colors.grey.shade300, borderRadius: BorderRadius.circular(12)),
+                                    child: Text(_dayLabel(createdAt), style: TextStyle(fontSize: 11.5, color: Colors.grey.shade700)),
+                                  ),
+                                ));
+                                lastDay = day;
+                              }
+                            }
+                            rows.add(Align(
+                              alignment: m.isMine ? Alignment.centerRight : Alignment.centerLeft,
+                              child: Container(
+                                constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.75),
+                                margin: const EdgeInsets.symmetric(vertical: 3),
+                                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                                decoration: BoxDecoration(
+                                  color: m.isMine ? AppTheme.primary : Colors.white,
+                                  borderRadius: BorderRadius.circular(14),
+                                ),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.end,
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Text(
+                                      m.message,
+                                      style: TextStyle(color: m.isMine ? Colors.white : Colors.black87, fontSize: 14.5),
+                                    ),
+                                    const SizedBox(height: 3),
+                                    Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Text(
+                                          _timeLabel(m.createdAt),
+                                          style: TextStyle(
+                                            fontSize: 10.5,
+                                            color: m.isMine ? Colors.white70 : Colors.grey.shade600,
+                                          ),
+                                        ),
+                                        // Sent indicator — a real read-receipt
+                                        // (double-tick turning blue once the
+                                        // other side has actually seen it)
+                                        // would need per-message read state,
+                                        // which we don't track yet; this just
+                                        // shows the message made it to the
+                                        // server.
+                                        if (m.isMine) ...[
+                                          const SizedBox(width: 3),
+                                          const Icon(Icons.done_all, size: 13, color: Colors.white70),
+                                        ],
+                                      ],
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ));
+                          }
+
+                          return ListView(
                             controller: _scrollController,
                             padding: const EdgeInsets.all(12),
-                            itemCount: messages.length,
-                            itemBuilder: (context, i) {
-                              final m = messages[i];
-                              return Align(
-                                alignment: m.isMine ? Alignment.centerRight : Alignment.centerLeft,
-                                child: Container(
-                                  constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.75),
-                                  margin: const EdgeInsets.symmetric(vertical: 4),
-                                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                                  decoration: BoxDecoration(
-                                    color: m.isMine ? AppTheme.primary : Colors.white,
-                                    borderRadius: BorderRadius.circular(14),
-                                  ),
-                                  child: Text(
-                                    m.message,
-                                    style: TextStyle(color: m.isMine ? Colors.white : Colors.black87, fontSize: 14.5),
-                                  ),
-                                ),
-                              );
-                            },
+                            children: rows,
                           );
                         },
                       ),
@@ -196,9 +304,18 @@ class _ChatScreenState extends State<ChatScreen> {
             ),
           SafeArea(
             child: Padding(
-              padding: const EdgeInsets.fromLTRB(10, 8, 10, 10),
+              padding: const EdgeInsets.fromLTRB(6, 8, 10, 10),
               child: Row(
                 children: [
+                  IconButton(
+                    icon: Icon(Icons.attach_file, color: Colors.grey.shade500),
+                    tooltip: 'Attachments coming soon',
+                    onPressed: () {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Sending photos/files isn\'t available yet.')),
+                      );
+                    },
+                  ),
                   Expanded(
                     child: TextField(
                       controller: _inputController,
