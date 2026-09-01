@@ -51,12 +51,9 @@ class ChatService {
   Future<void> send(String text) async {
     final threadSnap = await _threadRef.get();
 
-    await _messagesRef.add({
-      'sender': 'customer',
-      'message': text,
-      'createdAt': FieldValue.serverTimestamp(),
-    });
-
+    // Create/update the thread doc BEFORE adding the message (not after)
+    // — a customer's very first message must not leave a message sitting
+    // under a thread doc that doesn't exist yet, even briefly.
     if (threadSnap.exists) {
       await _threadRef.update({
         'lastMessage': text,
@@ -80,6 +77,12 @@ class ChatService {
         'unreadForCustomer': 0,
       });
     }
+
+    await _messagesRef.add({
+      'sender': 'customer',
+      'message': text,
+      'createdAt': FieldValue.serverTimestamp(),
+    });
   }
 
   /// Call when the thread is opened/visible to clear the customer's
