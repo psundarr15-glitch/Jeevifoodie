@@ -1,0 +1,479 @@
+import 'dart:async';
+import 'package:flutter/material.dart';
+import '../../services/customer_service.dart';
+import '../../theme.dart';
+import '../restaurant/restaurant_menu_screen.dart';
+import '../restaurant/restaurant_list_screen.dart';
+import '../../widgets/notification_bell.dart';
+import '../../l10n/app_localizations.dart';
+
+class HomeScreen extends StatefulWidget {
+  const HomeScreen({super.key});
+  @override
+  State<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends State<HomeScreen> {
+  late Future<HomeData> _future;
+
+  @override
+  void initState() {
+    super.initState();
+    _future = CustomerService.home();
+  }
+
+  Future<void> _refresh() async {
+    setState(() => _future = CustomerService.home());
+    await _future;
+  }
+
+  void _browseAll() => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const RestaurantListScreen()));
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: const Color(0xFFFFFBF5),
+      body: RefreshIndicator(
+        onRefresh: _refresh,
+        child: FutureBuilder<HomeData>(
+          future: _future,
+          builder: (context, snap) {
+            if (snap.connectionState != ConnectionState.done) {
+              return const Center(child: CircularProgressIndicator());
+            }
+            if (snap.hasError) {
+              return ListView(children: [
+                const SizedBox(height: 80),
+                Center(child: Text(AppLocalizations.of(context)!.couldNotLoadHome(snap.error.toString()))),
+              ]);
+            }
+            final data = snap.data!;
+            return ListView(
+              padding: EdgeInsets.zero,
+              children: [
+                _GreenHeader(onSearchTap: _browseAll),
+                Transform.translate(
+                  offset: const Offset(0, -26),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        if (data.coupons.isNotEmpty) _BannerCarousel(coupons: data.coupons, onOrderNow: _browseAll),
+                        if (data.coupons.isNotEmpty) const SizedBox(height: 24),
+                        if (data.categories.isNotEmpty) _CategoryRow(categories: data.categories),
+                        const SizedBox(height: 24),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(AppLocalizations.of(context)!.popularRestaurants, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                            GestureDetector(
+                              onTap: _browseAll,
+                              child: Text(AppLocalizations.of(context)!.viewAll, style: const TextStyle(color: AppTheme.primary, fontWeight: FontWeight.w600)),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+                      ],
+                    ),
+                  ),
+                ),
+                SizedBox(
+                  height: 230,
+                  child: ListView.separated(
+                    scrollDirection: Axis.horizontal,
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    itemCount: data.restaurants.length,
+                    separatorBuilder: (_, __) => const SizedBox(width: 14),
+                    itemBuilder: (_, i) {
+                      final r = data.restaurants[i];
+                      return _HomeRestaurantCard(
+                        restaurant: r,
+                        onTap: () => Navigator.of(context).push(
+                          MaterialPageRoute(builder: (_) => RestaurantMenuScreen(restaurantId: r.id)),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+                const SizedBox(height: 24),
+                if (data.coupons.isNotEmpty) ...[
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    child: Text(AppLocalizations.of(context)!.bestDealsForYou, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                  ),
+                  const SizedBox(height: 12),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    child: Row(
+                      children: [
+                        for (int i = 0; i < data.coupons.length && i < 3; i++) ...[
+                          if (i > 0) const SizedBox(width: 12),
+                          Expanded(child: _DealCard(coupon: data.coupons[i], index: i)),
+                        ],
+                      ],
+                    ),
+                  ),
+                ],
+                const SizedBox(height: 24),
+              ],
+            );
+          },
+        ),
+      ),
+    );
+  }
+}
+
+class _GreenHeader extends StatelessWidget {
+  final VoidCallback onSearchTap;
+  const _GreenHeader({required this.onSearchTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(20, 0, 20, 56),
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(colors: [AppTheme.primary, AppTheme.primaryDark], begin: Alignment.topLeft, end: Alignment.bottomRight),
+      ),
+      child: SafeArea(
+        bottom: false,
+        child: Column(
+          children: [
+            const SizedBox(height: 4),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(AppLocalizations.of(context)!.deliverTo, style: const TextStyle(color: Colors.white70, fontSize: 13)),
+                      Row(
+                        children: [
+                          Text(AppLocalizations.of(context)!.home, style: const TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.w800)),
+                          const Icon(Icons.keyboard_arrow_down, color: Colors.white, size: 24),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+                const NotificationBell(),
+              ],
+            ),
+            const SizedBox(height: 20),
+            GestureDetector(
+              onTap: onSearchTap,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(14),
+                  boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.08), blurRadius: 10, offset: const Offset(0, 4))],
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.search, color: Colors.grey.shade500),
+                    const SizedBox(width: 10),
+                    Text(AppLocalizations.of(context)!.searchForRestaurantOrFood, style: TextStyle(color: Colors.grey.shade500)),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _BannerCarousel extends StatefulWidget {
+  final List<Map<String, dynamic>> coupons;
+  final VoidCallback onOrderNow;
+  const _BannerCarousel({required this.coupons, required this.onOrderNow});
+
+  @override
+  State<_BannerCarousel> createState() => _BannerCarouselState();
+}
+
+class _BannerCarouselState extends State<_BannerCarousel> {
+  late final PageController _controller = PageController();
+  Timer? _timer;
+  int _page = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _timer = Timer.periodic(const Duration(seconds: 4), (_) {
+      if (!mounted || widget.coupons.isEmpty) return;
+      final next = (_page + 1) % widget.coupons.length;
+      _controller.animateToPage(next, duration: const Duration(milliseconds: 450), curve: Curves.easeInOut);
+    });
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    const foodImage = 'https://images.unsplash.com/photo-1585032226651-759b368d7246?w=500&h=400&fit=crop';
+
+    return Column(
+      children: [
+        SizedBox(
+          height: 190,
+          child: PageView.builder(
+            controller: _controller,
+            onPageChanged: (i) => setState(() => _page = i),
+            itemCount: widget.coupons.length,
+            itemBuilder: (_, i) {
+              final c = widget.coupons[i];
+              final isPercent = c['discount_type'] == 'percent';
+              final label = isPercent ? '${c['discount_value']}%' : '₹${c['discount_value']}';
+              return ClipRRect(
+                borderRadius: BorderRadius.circular(18),
+                child: Container(
+                  decoration: const BoxDecoration(
+                    gradient: LinearGradient(colors: [AppTheme.primary, AppTheme.primaryDark], begin: Alignment.topLeft, end: Alignment.bottomRight),
+                  ),
+                  child: Stack(
+                    children: [
+                      Positioned(
+                        right: -10,
+                        bottom: -10,
+                        top: 10,
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(16),
+                          child: Image.network(foodImage, width: 190, fit: BoxFit.cover),
+                        ),
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.all(24),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Text(AppLocalizations.of(context)!.offLabel(label), style: const TextStyle(color: Colors.white, fontSize: 32, fontWeight: FontWeight.w900)),
+                            const SizedBox(height: 4),
+                            Text(AppLocalizations.of(context)!.useCode(c['code'].toString()), style: const TextStyle(color: Colors.white70, fontSize: 14)),
+                            const SizedBox(height: 18),
+                            GestureDetector(
+                              onTap: widget.onOrderNow,
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                                decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(8)),
+                                child: Text(AppLocalizations.of(context)!.orderNow, style: const TextStyle(color: AppTheme.primaryDark, fontWeight: FontWeight.bold, fontSize: 12)),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+        if (widget.coupons.length > 1) ...[
+          const SizedBox(height: 10),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: List.generate(widget.coupons.length, (i) {
+              final active = i == _page;
+              return AnimatedContainer(
+                duration: const Duration(milliseconds: 200),
+                margin: const EdgeInsets.symmetric(horizontal: 3),
+                width: active ? 18 : 6,
+                height: 6,
+                decoration: BoxDecoration(
+                  color: active ? AppTheme.primary : Colors.grey.shade300,
+                  borderRadius: BorderRadius.circular(3),
+                ),
+              );
+            }),
+          ),
+        ],
+      ],
+    );
+  }
+}
+
+class _CategoryRow extends StatelessWidget {
+  final List categories;
+  const _CategoryRow({required this.categories});
+
+  static const _fallbackIcons = [Icons.rice_bowl, Icons.local_pizza, Icons.lunch_dining, Icons.cake, Icons.icecream, Icons.local_drink];
+
+  @override
+  Widget build(BuildContext context) {
+    final shown = categories.take(4).toList();
+    return SizedBox(
+      height: 88,
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          for (int i = 0; i < shown.length; i++)
+            _CategoryItem(
+              label: shown[i].displayName(context),
+              icon: shown[i].icon,
+              fallbackIcon: _fallbackIcons[i % _fallbackIcons.length],
+              onTap: () => Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => RestaurantListScreen(initialQuery: shown[i].name)),
+              ),
+            ),
+          _CategoryItem(
+            label: AppLocalizations.of(context)!.more,
+            icon: null,
+            fallbackIcon: Icons.grid_view_rounded,
+            isMore: true,
+            onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const RestaurantListScreen())),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _CategoryItem extends StatelessWidget {
+  final String label;
+  final String? icon;
+  final IconData fallbackIcon;
+  final bool isMore;
+  final VoidCallback onTap;
+  const _CategoryItem({required this.label, required this.icon, required this.fallbackIcon, required this.onTap, this.isMore = false});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Column(
+        children: [
+          CircleAvatar(
+            radius: 28,
+            backgroundColor: isMore ? AppTheme.primary : Colors.white,
+            backgroundImage: icon != null ? NetworkImage(icon!) : null,
+            child: icon == null
+                ? Icon(fallbackIcon, color: isMore ? Colors.white : AppTheme.primary, size: 24)
+                : null,
+          ),
+          const SizedBox(height: 8),
+          Text(label, style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600)),
+        ],
+      ),
+    );
+  }
+}
+
+class _HomeRestaurantCard extends StatelessWidget {
+  final dynamic restaurant;
+  final VoidCallback onTap;
+  const _HomeRestaurantCard({required this.restaurant, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    const fallbackImage = 'https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=400&h=300&fit=crop';
+
+    return GestureDetector(
+      onTap: onTap,
+      child: SizedBox(
+        width: 190,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Stack(
+              children: [
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(14),
+                  child: Image.network(
+                    restaurant.image?.isNotEmpty == true ? restaurant.image! : fallbackImage,
+                    height: 120,
+                    width: 190,
+                    fit: BoxFit.cover,
+                    errorBuilder: (_, __, ___) => Image.network(fallbackImage, height: 120, width: 190, fit: BoxFit.cover),
+                  ),
+                ),
+                Positioned(
+                  top: 8,
+                  right: 8,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                    decoration: BoxDecoration(color: Colors.green.shade600, borderRadius: BorderRadius.circular(6)),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.star, size: 11, color: Colors.white),
+                        const SizedBox(width: 2),
+                        Text(restaurant.rating.toStringAsFixed(1), style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold)),
+                      ],
+                    ),
+                  ),
+                ),
+                Positioned(
+                  left: 8,
+                  bottom: 8,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                    decoration: BoxDecoration(color: Colors.black.withOpacity(0.65), borderRadius: BorderRadius.circular(6)),
+                    child: Text(AppLocalizations.of(context)!.prepTimeRange(restaurant.prepTimeMin.toString(), restaurant.prepTimeMax.toString()), style: const TextStyle(color: Colors.white, fontSize: 11)),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Text(restaurant.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+            const SizedBox(height: 2),
+            Text(restaurant.cuisine ?? '', maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(color: Colors.grey.shade600, fontSize: 12.5)),
+            const SizedBox(height: 2),
+            Text(
+              AppLocalizations.of(context)!.prepTimeAndCost(
+                restaurant.prepTimeMin.toString(),
+                restaurant.prepTimeMax.toString(),
+                restaurant.costForTwo.toString(),
+              ),
+              style: TextStyle(color: AppTheme.success, fontSize: 12, fontWeight: FontWeight.w600),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _DealCard extends StatelessWidget {
+  final Map<String, dynamic> coupon;
+  final int index;
+  const _DealCard({required this.coupon, required this.index});
+
+  static const _bgColors = [Color(0xFFFBDADA), Color(0xFFFFF3D0), Color(0xFFFDF6EC)];
+  static const _icons = [Icons.delivery_dining, Icons.local_pizza, Icons.account_balance_wallet];
+
+  @override
+  Widget build(BuildContext context) {
+    final isPercent = coupon['discount_type'] == 'percent';
+    final label = isPercent ? 'Flat ${coupon['discount_value']}% OFF' : '₹${coupon['discount_value']} OFF';
+    final color = _bgColors[index % _bgColors.length];
+    final icon = _icons[index % _icons.length];
+
+    return Container(
+      height: 150,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(14)),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(label, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13.5)),
+          const SizedBox(height: 4),
+          Text(AppLocalizations.of(context)!.codeLabel(coupon['code'].toString()), style: TextStyle(color: Colors.grey.shade700, fontSize: 11.5)),
+          const Spacer(),
+          Align(alignment: Alignment.bottomRight, child: Icon(icon, color: AppTheme.primaryDark.withOpacity(0.6), size: 30)),
+        ],
+      ),
+    );
+  }
+}
