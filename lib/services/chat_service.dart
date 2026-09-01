@@ -14,6 +14,8 @@ class ChatService {
   static FirebaseFirestore get _db => FirebaseFirestore.instance;
 
   String? _threadId;
+  String? _customerName;
+  String? _customerEmail;
   bool _signedIn = false;
 
   /// Must be called once before [messages]/[send] — signs this device in
@@ -24,6 +26,11 @@ class ChatService {
     final res = await ApiClient.get(ApiConfig.chatFirebaseToken(restaurantId));
     final token = res['token'] as String;
     _threadId = res['thread_id'] as String;
+    // From the backend (not local app state) so the thread doc always
+    // gets a real name/email even if the profile wasn't loaded locally —
+    // this is what the admin/manager inbox list displays per thread.
+    _customerName = res['customer_name'] as String?;
+    _customerEmail = res['customer_email'] as String?;
 
     if (!_signedIn) {
       await FirebaseAuth.instance.signInWithCustomToken(token);
@@ -48,6 +55,15 @@ class ChatService {
         .map((snap) => snap.docs.map(ChatMessage.fromFirestore).toList());
   }
 
+  /// Live stream of just the thread's status ('open' | 'closed', or null
+  /// if no conversation has started yet — treat that as open/new).
+  Stream<String?> status() {
+    return _threadRef.snapshots().map((snap) {
+      if (!snap.exists) return null;
+      return (snap.data()?['status'] as String?) ?? 'open';
+    });
+  }
+
   Future<void> send(String text) async {
     final threadSnap = await _threadRef.get();
 
@@ -55,11 +71,17 @@ class ChatService {
     // — a customer's very first message must not leave a message sitting
     // under a thread doc that doesn't exist yet, even briefly.
     if (threadSnap.exists) {
+      final wasClosed = (threadSnap.data()?['status'] as String?) == 'closed';
       await _threadRef.update({
         'lastMessage': text,
         'lastMessageAt': FieldValue.serverTimestamp(),
         'unreadForStaff': FieldValue.increment(1),
         'unreadForCustomer': 0,
+        // Sending a message after the chat ended naturally re-opens it —
+        // no separate "reopen" step needed for the customer side.
+        if (wasClosed) 'status': 'open',
+        if (wasClosed) 'closedAt': null,
+        if (wasClosed) 'closedBy': null,
       });
     } else {
       // First message in this thread — create it. userId/restaurantId/
@@ -71,10 +93,13 @@ class ChatService {
         'userId': int.parse(FirebaseAuth.instance.currentUser!.uid),
         'restaurantId': isRestaurant ? int.parse(parts[1]) : null,
         'recipientRole': isRestaurant ? 'manager' : 'admin',
+        'customerName': _customerName,
+        'customerEmail': _customerEmail,
         'lastMessage': text,
         'lastMessageAt': FieldValue.serverTimestamp(),
         'unreadForStaff': 1,
         'unreadForCustomer': 0,
+        'status': 'open',
       });
     }
 
@@ -82,6 +107,19 @@ class ChatService {
       'sender': 'customer',
       'message': text,
       'createdAt': FieldValue.serverTimestamp(),
+    });
+  }
+
+  /// Customer taps "End chat". Staff can still see the history; the
+  /// customer sending another message re-opens it automatically (see
+  /// [send]) rather than needing a separate "reopen" action.
+  Future<void> closeChat() async {
+    final snap = await _threadRef.get();
+    if (!snap.exists) return;
+    await _threadRef.update({
+      'status': 'closed',
+      'closedAt': FieldValue.serverTimestamp(),
+      'closedBy': 'customer',
     });
   }
 

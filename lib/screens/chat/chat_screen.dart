@@ -73,6 +73,27 @@ class _ChatScreenState extends State<ChatScreen> {
     }
   }
 
+  Future<void> _confirmEndChat(AppLocalizations t) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(t.chatEndTitle),
+        content: Text(t.chatEndConfirm),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text(t.chatEndCancel)),
+          TextButton(onPressed: () => Navigator.pop(ctx, true), child: Text(t.chatEndConfirmAction)),
+        ],
+      ),
+    );
+    if (confirmed == true) {
+      try {
+        await _chatService.closeChat();
+      } catch (e) {
+        if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final t = AppLocalizations.of(context)!;
@@ -81,7 +102,23 @@ class _ChatScreenState extends State<ChatScreen> {
 
     return Scaffold(
       backgroundColor: const Color(0xFFFFF3EC),
-      appBar: AppBar(title: Text(title)),
+      appBar: AppBar(
+        title: Text(title),
+        actions: [
+          if (!_connecting && _connectError == null)
+            StreamBuilder<String?>(
+              stream: _chatService.status(),
+              builder: (context, statusSnap) {
+                final isOpen = statusSnap.data != 'closed';
+                if (!isOpen) return const SizedBox.shrink();
+                return TextButton(
+                  onPressed: () => _confirmEndChat(t),
+                  child: Text(t.chatEndAction, style: const TextStyle(color: Colors.white)),
+                );
+              },
+            ),
+        ],
+      ),
       body: Column(
         children: [
           Expanded(
@@ -140,6 +177,23 @@ class _ChatScreenState extends State<ChatScreen> {
                         },
                       ),
           ),
+          if (!_connecting && _connectError == null)
+            StreamBuilder<String?>(
+              stream: _chatService.status(),
+              builder: (context, statusSnap) {
+                if (statusSnap.data != 'closed') return const SizedBox.shrink();
+                return Container(
+                  width: double.infinity,
+                  color: Colors.grey.shade200,
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                  child: Text(
+                    t.chatEndedBanner,
+                    textAlign: TextAlign.center,
+                    style: TextStyle(color: Colors.grey.shade700, fontSize: 12.5),
+                  ),
+                );
+              },
+            ),
           SafeArea(
             child: Padding(
               padding: const EdgeInsets.fromLTRB(10, 8, 10, 10),
