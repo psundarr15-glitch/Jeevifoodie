@@ -16,13 +16,17 @@ class ChatService {
   String? _threadId;
   String? _customerName;
   String? _customerEmail;
+  String? _restaurantName;
   bool _signedIn = false;
 
   /// Must be called once before [messages]/[send] — signs this device in
   /// to Firebase with the role/ownership claims our backend decided are
   /// valid for [restaurantId] (falls back to the general admin thread if
   /// the customer doesn't actually have an order from that restaurant).
-  Future<void> connect({int? restaurantId}) async {
+  /// [restaurantName] is only used to denormalize onto the thread doc (so
+  /// the Chats list can show "Aachi Samayal" instead of a blank title) —
+  /// pass it whenever the caller already has it (e.g. from order tracking).
+  Future<void> connect({int? restaurantId, String? restaurantName}) async {
     final res = await ApiClient.get(ApiConfig.chatFirebaseToken(restaurantId));
     final token = res['token'] as String;
     _threadId = res['thread_id'] as String;
@@ -31,6 +35,7 @@ class ChatService {
     // this is what the admin/manager inbox list displays per thread.
     _customerName = res['customer_name'] as String?;
     _customerEmail = res['customer_email'] as String?;
+    _restaurantName = restaurantName;
 
     if (!_signedIn) {
       await FirebaseAuth.instance.signInWithCustomToken(token);
@@ -71,6 +76,23 @@ class ChatService {
     return _threadRef.snapshots().map((snap) => snap.exists ? snap.data() : null);
   }
 
+  /// Every chat thread (general support AND every restaurant) this
+  /// signed-in customer has ever started, newest first — this is what
+  /// powers the Chats list, so a restaurant thread shows up there the
+  /// first time the customer sends it a message, with no extra step.
+  /// Requires being signed in already (any prior connect() call, on any
+  /// thread, is enough — the Firebase Auth session is shared app-wide).
+  static Stream<List<Map<String, dynamic>>> myThreads() {
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid == null) return const Stream.empty();
+    return _db
+        .collection('chat_threads')
+        .where('userId', isEqualTo: int.parse(uid))
+        .orderBy('lastMessageAt', descending: true)
+        .snapshots()
+        .map((snap) => snap.docs.map((d) => {...d.data(), 'threadId': d.id}).toList());
+  }
+
   Future<void> send(String text) async {
     final threadSnap = await _threadRef.get();
 
@@ -102,6 +124,7 @@ class ChatService {
         'recipientRole': isRestaurant ? 'manager' : 'admin',
         'customerName': _customerName,
         'customerEmail': _customerEmail,
+        if (isRestaurant) 'restaurantName': _restaurantName,
         'lastMessage': text,
         'lastMessageAt': FieldValue.serverTimestamp(),
         'unreadForStaff': 1,
@@ -137,5 +160,27 @@ class ChatService {
     if (snap.exists) {
       await _threadRef.update({'unreadForCustomer': 0});
     }
+  }
+
+  /// Swipe-to-delete on the Chats list — permanently removes the thread
+  /// AND every message in it (not just the thread doc), so re-opening the
+  /// same restaurant/support thread later starts a clean slate instead of
+  /// the old messages reappearing under the same deterministic threadId.
+  static Future<void> deleteThread(String threadId) async {
+    final ref = _db.collection('chat_threads').doc(threadId);
+    final messages = await ref.collection('messages').get();
+
+    // Firestore batches cap at 500 writes; chunk defensively in case a
+    // long-running conversation ever has more messages than that.
+    const chunkSize = 400;
+    for (var i = 0; i < messages.docs.length; i += chunkSize) {
+      final batch = _db.batch();
+      for (final doc in messages.docs.skip(i).take(chunkSize)) {
+        batch.delete(doc.reference);
+      }
+      await batch.commit();
+    }
+
+    await ref.delete();
   }
 }

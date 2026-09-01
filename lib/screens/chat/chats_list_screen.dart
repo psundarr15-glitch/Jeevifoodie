@@ -8,10 +8,14 @@ import '../../l10n/app_localizations.dart';
 import '../orders/order_track_screen.dart';
 import 'chat_screen.dart';
 
-/// A single row in any of the Chats tabs — support thread and order
-/// entries both get normalized into this so they can share one list
+/// A single row in any of the Chats tabs — support/restaurant threads and
+/// order entries all get normalized into this so they can share one list
 /// tile design and (for "All Chats") be sorted together by recency.
+/// [threadId] is only set for real chat_threads docs — that's what makes
+/// a row swipe-to-delete-able; order entries (threadId == null) are just
+/// a shortcut into order tracking, not a deletable conversation.
 class _ChatEntry {
+  final String? threadId;
   final Widget avatar;
   final String title;
   final String subtitle;
@@ -25,6 +29,7 @@ class _ChatEntry {
     required this.subtitle,
     required this.time,
     required this.onTap,
+    this.threadId,
     this.unreadCount = 0,
   });
 }
@@ -41,9 +46,9 @@ class _ChatsListScreenState extends State<ChatsListScreen> with SingleTickerProv
   final _searchController = TextEditingController();
   String _query = '';
 
-  final _supportChatService = ChatService();
-  bool _supportConnecting = true;
-  String? _supportConnectError;
+  final _bootstrapChatService = ChatService();
+  bool _connecting = true;
+  String? _connectError;
 
   late Future<List<OrderSummary>> _ordersFuture;
 
@@ -51,15 +56,17 @@ class _ChatsListScreenState extends State<ChatsListScreen> with SingleTickerProv
   void initState() {
     super.initState();
     _ordersFuture = OrderService.myOrders();
-    _connectSupport();
+    _connect();
   }
 
-  Future<void> _connectSupport() async {
+  // A sign-in (any thread) is enough to authorize ChatService.myThreads(),
+  // since the Firebase Auth session is shared app-wide.
+  Future<void> _connect() async {
     try {
-      await _supportChatService.connect();
-      if (mounted) setState(() => _supportConnecting = false);
+      await _bootstrapChatService.connect();
+      if (mounted) setState(() => _connecting = false);
     } catch (e) {
-      if (mounted) setState(() { _supportConnecting = false; _supportConnectError = e.toString(); });
+      if (mounted) setState(() { _connecting = false; _connectError = e.toString(); });
     }
   }
 
@@ -89,17 +96,27 @@ class _ChatsListScreenState extends State<ChatsListScreen> with SingleTickerProv
     }
   }
 
-  _ChatEntry _supportEntry(Map<String, dynamic>? data) {
-    final lastMessage = data?['lastMessage'] as String?;
-    final ts = data?['lastMessageAt'];
-    final unread = (data?['unreadForCustomer'] as num?)?.toInt() ?? 0;
+  _ChatEntry _threadEntry(Map<String, dynamic> data) {
+    final isManager = data['recipientRole'] == 'manager';
+    final ts = data['lastMessageAt'];
     return _ChatEntry(
-      avatar: const CircleAvatar(backgroundColor: AppTheme.primary, child: Icon(Icons.support_agent, color: Colors.white)),
-      title: 'JEEVI Support',
-      subtitle: lastMessage ?? 'Send us a message — we usually reply within a few minutes.',
+      threadId: data['threadId'] as String,
+      avatar: CircleAvatar(
+        backgroundColor: isManager ? Colors.grey.shade200 : AppTheme.primary,
+        child: Icon(
+          isManager ? Icons.storefront : Icons.support_agent,
+          color: isManager ? Colors.grey.shade700 : Colors.white,
+        ),
+      ),
+      title: isManager ? ((data['restaurantName'] as String?) ?? 'Restaurant') : 'JEEVI Support',
+      subtitle: (data['lastMessage'] as String?) ?? '',
       time: ts is Timestamp ? ts.toDate() : null,
-      unreadCount: unread,
-      onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const ChatScreen())),
+      unreadCount: (data['unreadForCustomer'] as num?)?.toInt() ?? 0,
+      onTap: () => Navigator.of(context).push(MaterialPageRoute(
+        builder: (_) => isManager
+            ? ChatScreen(restaurantId: data['restaurantId'] as int?, restaurantName: data['restaurantName'] as String?)
+            : const ChatScreen(),
+      )),
     );
   }
 
@@ -137,8 +154,32 @@ class _ChatsListScreenState extends State<ChatsListScreen> with SingleTickerProv
     return entries.where((e) => e.title.toLowerCase().contains(q) || e.subtitle.toLowerCase().contains(q)).toList();
   }
 
+  Future<void> _confirmDelete(_ChatEntry e) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Delete this chat?'),
+        content: Text('This permanently deletes your conversation with ${e.title}. This can\'t be undone.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Delete', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+    if (confirmed == true && e.threadId != null) {
+      try {
+        await ChatService.deleteThread(e.threadId!);
+      } catch (err) {
+        if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Could not delete: $err')));
+      }
+    }
+  }
+
   Widget _entryTile(_ChatEntry e) {
-    return ListTile(
+    final tile = ListTile(
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       leading: e.avatar,
       title: Text(e.title, style: const TextStyle(fontWeight: FontWeight.w600)),
@@ -159,6 +200,30 @@ class _ChatsListScreenState extends State<ChatsListScreen> with SingleTickerProv
       ),
       onTap: e.onTap,
     );
+
+    // Only real chat threads (support/restaurant) are swipe-to-delete —
+    // an order entry is just a shortcut into order tracking, not a
+    // conversation of its own to delete.
+    if (e.threadId == null) return tile;
+
+    return Dismissible(
+      key: ValueKey(e.threadId),
+      direction: DismissDirection.endToStart,
+      background: Container(
+        color: Colors.red,
+        alignment: Alignment.centerRight,
+        padding: const EdgeInsets.only(right: 24),
+        child: const Icon(Icons.delete, color: Colors.white),
+      ),
+      confirmDismiss: (_) async {
+        await _confirmDelete(e);
+        // We delete via Firestore ourselves above (which removes this
+        // row from the underlying stream); returning false here just
+        // stops Dismissible's own optimistic removal from racing it.
+        return false;
+      },
+      child: tile,
+    );
   }
 
   Widget _list(List<_ChatEntry> entries, String emptyText) {
@@ -177,25 +242,35 @@ class _ChatsListScreenState extends State<ChatsListScreen> with SingleTickerProv
     );
   }
 
-  Widget _supportTab() {
-    if (_supportConnecting) return const Center(child: CircularProgressIndicator());
-    if (_supportConnectError != null) {
+  Widget _threadsStreamBuilder(Widget Function(List<Map<String, dynamic>> threads) builder) {
+    if (_connecting) return const Center(child: CircularProgressIndicator());
+    if (_connectError != null) {
       return Center(
         child: Padding(
           padding: const EdgeInsets.all(24),
-          child: Text(_supportConnectError!, textAlign: TextAlign.center, style: TextStyle(color: Colors.grey.shade600)),
+          child: Text(_connectError!, textAlign: TextAlign.center, style: TextStyle(color: Colors.grey.shade600)),
         ),
       );
     }
-    return StreamBuilder<Map<String, dynamic>?>(
-      stream: _supportChatService.threadData(),
+    return StreamBuilder<List<Map<String, dynamic>>>(
+      stream: ChatService.myThreads(),
       builder: (context, snap) {
         if (snap.connectionState == ConnectionState.waiting) {
           return const Center(child: CircularProgressIndicator());
         }
-        return _list([_supportEntry(snap.data)], 'No support conversations yet.');
+        if (snap.hasError) {
+          return Center(child: Text('${snap.error}'));
+        }
+        return builder(snap.data ?? []);
       },
     );
+  }
+
+  Widget _supportTab() {
+    return _threadsStreamBuilder((threads) {
+      final entries = threads.where((t) => t['recipientRole'] == 'admin').map(_threadEntry).toList();
+      return _list(entries, 'No support conversations yet.');
+    });
   }
 
   Widget _ordersTab() {
@@ -214,30 +289,26 @@ class _ChatsListScreenState extends State<ChatsListScreen> with SingleTickerProv
   }
 
   Widget _allTab() {
-    if (_supportConnecting) return const Center(child: CircularProgressIndicator());
-    return StreamBuilder<Map<String, dynamic>?>(
-      stream: _supportChatService.threadData(),
-      builder: (context, supportSnap) {
-        return FutureBuilder<List<OrderSummary>>(
-          future: _ordersFuture,
-          builder: (context, ordersSnap) {
-            if (ordersSnap.connectionState != ConnectionState.done) {
-              return const Center(child: CircularProgressIndicator());
-            }
-            final entries = <_ChatEntry>[
-              _supportEntry(supportSnap.data),
-              ..._orderEntries(ordersSnap.data ?? []),
-            ];
-            entries.sort((a, b) {
-              final at = a.time ?? DateTime.fromMillisecondsSinceEpoch(0);
-              final bt = b.time ?? DateTime.fromMillisecondsSinceEpoch(0);
-              return bt.compareTo(at);
-            });
-            return _list(entries, 'No conversations yet.');
-          },
-        );
-      },
-    );
+    return _threadsStreamBuilder((threads) {
+      return FutureBuilder<List<OrderSummary>>(
+        future: _ordersFuture,
+        builder: (context, ordersSnap) {
+          if (ordersSnap.connectionState != ConnectionState.done) {
+            return const Center(child: CircularProgressIndicator());
+          }
+          final entries = <_ChatEntry>[
+            ...threads.map(_threadEntry),
+            ..._orderEntries(ordersSnap.data ?? []),
+          ];
+          entries.sort((a, b) {
+            final at = a.time ?? DateTime.fromMillisecondsSinceEpoch(0);
+            final bt = b.time ?? DateTime.fromMillisecondsSinceEpoch(0);
+            return bt.compareTo(at);
+          });
+          return _list(entries, 'No conversations yet.');
+        },
+      );
+    });
   }
 
   @override

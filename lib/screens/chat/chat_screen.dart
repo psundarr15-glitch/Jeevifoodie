@@ -33,7 +33,7 @@ class _ChatScreenState extends State<ChatScreen> {
 
   Future<void> _connect() async {
     try {
-      await _chatService.connect(restaurantId: widget.restaurantId);
+      await _chatService.connect(restaurantId: widget.restaurantId, restaurantName: widget.restaurantName);
       await _chatService.markRead();
       if (mounted) setState(() => _connecting = false);
     } catch (e) {
