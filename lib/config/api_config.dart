@@ -43,6 +43,11 @@ class ApiConfig {
       ? '$baseUrl/customer/chat/firebase-token?restaurant_id=$restaurantId'
       : '$baseUrl/customer/chat/firebase-token';
 
+  // Chat image attachments upload here (saved on our own server, not
+  // Firebase Storage) — only the returned URL goes into the Firestore
+  // message.
+  static const String chatUploadImage = '$baseUrl/customer/chat/upload-image';
+
   // Rendered natively in-app (see StaticPageScreen) rather than opening
   // the web frontend, which is not shipped alongside the app - the API
   // is the only thing this app ever depends on.

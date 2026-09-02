@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../config/api_config.dart';
@@ -14,6 +15,7 @@ class ChatService {
   static FirebaseFirestore get _db => FirebaseFirestore.instance;
 
   String? _threadId;
+  int? _restaurantId;
   String? _customerName;
   String? _customerEmail;
   String? _restaurantName;
@@ -30,6 +32,11 @@ class ChatService {
     final res = await ApiClient.get(ApiConfig.chatFirebaseToken(restaurantId));
     final token = res['token'] as String;
     _threadId = res['thread_id'] as String;
+    // The backend's own validated restaurant_id (null if the requested
+    // one wasn't legitimate and it fell back to the admin thread) - used
+    // again by sendImage() so the upload lands in the exact same
+    // threadId folder as this thread, not a client-guessed one.
+    _restaurantId = res['restaurant_id'] as int?;
     // From the backend (not local app state) so the thread doc always
     // gets a real name/email even if the profile wasn't loaded locally —
     // this is what the admin/manager inbox list displays per thread.
@@ -136,6 +143,61 @@ class ChatService {
     await _messagesRef.add({
       'sender': 'customer',
       'message': text,
+      'type': 'text',
+      'createdAt': FieldValue.serverTimestamp(),
+    });
+  }
+
+  /// Uploads [imageFile] to our own server (not Firebase Storage — see
+  /// Api\ChatApiController::uploadImage) and posts the returned URL as an
+  /// image message. Thread creation/update follows the same shape as
+  /// [send].
+  Future<void> sendImage(File imageFile) async {
+    final uploadRes = await ApiClient.postMultipart(
+      ApiConfig.chatUploadImage,
+      {if (_restaurantId != null) 'restaurant_id': _restaurantId},
+      files: {'image': imageFile},
+    );
+    final imageUrl = uploadRes['url'] as String;
+
+    final threadSnap = await _threadRef.get();
+
+    const captionText = '📷 Photo';
+
+    if (threadSnap.exists) {
+      final wasClosed = (threadSnap.data()?['status'] as String?) == 'closed';
+      await _threadRef.update({
+        'lastMessage': captionText,
+        'lastMessageAt': FieldValue.serverTimestamp(),
+        'unreadForStaff': FieldValue.increment(1),
+        'unreadForCustomer': 0,
+        if (wasClosed) 'status': 'open',
+        if (wasClosed) 'closedAt': null,
+        if (wasClosed) 'closedBy': null,
+      });
+    } else {
+      final parts = _threadId!.split('_');
+      final isRestaurant = _threadId!.startsWith('restaurant_');
+      await _threadRef.set({
+        'userId': int.parse(FirebaseAuth.instance.currentUser!.uid),
+        'restaurantId': isRestaurant ? int.parse(parts[1]) : null,
+        'recipientRole': isRestaurant ? 'manager' : 'admin',
+        'customerName': _customerName,
+        'customerEmail': _customerEmail,
+        if (isRestaurant) 'restaurantName': _restaurantName,
+        'lastMessage': captionText,
+        'lastMessageAt': FieldValue.serverTimestamp(),
+        'unreadForStaff': 1,
+        'unreadForCustomer': 0,
+        'status': 'open',
+      });
+    }
+
+    await _messagesRef.add({
+      'sender': 'customer',
+      'message': captionText,
+      'type': 'image',
+      'imageUrl': imageUrl,
       'createdAt': FieldValue.serverTimestamp(),
     });
   }

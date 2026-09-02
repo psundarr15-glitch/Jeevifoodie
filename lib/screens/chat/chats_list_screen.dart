@@ -1,21 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../services/chat_service.dart';
-import '../../services/order_service.dart';
-import '../../models/order.dart';
 import '../../theme.dart';
 import '../../l10n/app_localizations.dart';
-import '../orders/order_track_screen.dart';
 import 'chat_screen.dart';
 
-/// A single row in any of the Chats tabs — support/restaurant threads and
-/// order entries all get normalized into this so they can share one list
-/// tile design and (for "All Chats") be sorted together by recency.
-/// [threadId] is only set for real chat_threads docs — that's what makes
-/// a row swipe-to-delete-able; order entries (threadId == null) are just
-/// a shortcut into order tracking, not a deletable conversation.
+/// A single row in the Chats list — support/restaurant threads, all
+/// backed by a real chat_threads doc (that's what makes a row
+/// swipe-to-delete-able).
 class _ChatEntry {
-  final String? threadId;
+  final String threadId;
   final Widget avatar;
   final String title;
   final String subtitle;
@@ -24,12 +18,12 @@ class _ChatEntry {
   final VoidCallback onTap;
 
   _ChatEntry({
+    required this.threadId,
     required this.avatar,
     required this.title,
     required this.subtitle,
     required this.time,
     required this.onTap,
-    this.threadId,
     this.unreadCount = 0,
   });
 }
@@ -41,8 +35,7 @@ class ChatsListScreen extends StatefulWidget {
   State<ChatsListScreen> createState() => _ChatsListScreenState();
 }
 
-class _ChatsListScreenState extends State<ChatsListScreen> with SingleTickerProviderStateMixin {
-  late final TabController _tabController = TabController(length: 3, vsync: this);
+class _ChatsListScreenState extends State<ChatsListScreen> {
   final _searchController = TextEditingController();
   String _query = '';
 
@@ -50,12 +43,9 @@ class _ChatsListScreenState extends State<ChatsListScreen> with SingleTickerProv
   bool _connecting = true;
   String? _connectError;
 
-  late Future<List<OrderSummary>> _ordersFuture;
-
   @override
   void initState() {
     super.initState();
-    _ordersFuture = OrderService.myOrders();
     _connect();
   }
 
@@ -72,28 +62,8 @@ class _ChatsListScreenState extends State<ChatsListScreen> with SingleTickerProv
 
   @override
   void dispose() {
-    _tabController.dispose();
     _searchController.dispose();
     super.dispose();
-  }
-
-  String _orderStatusMessage(String status) {
-    switch (status) {
-      case 'placed':
-        return 'Your order has been placed.';
-      case 'confirmed':
-        return 'The restaurant confirmed your order.';
-      case 'preparing':
-        return 'Your order is being prepared.';
-      case 'out_for_delivery':
-        return 'Your order is on the way.';
-      case 'delivered':
-        return 'Your order has been delivered.';
-      case 'cancelled':
-        return 'This order was cancelled.';
-      default:
-        return status;
-    }
   }
 
   _ChatEntry _threadEntry(Map<String, dynamic> data) {
@@ -118,23 +88,6 @@ class _ChatsListScreenState extends State<ChatsListScreen> with SingleTickerProv
             : const ChatScreen(),
       )),
     );
-  }
-
-  List<_ChatEntry> _orderEntries(List<OrderSummary> orders) {
-    return orders.map((o) {
-      return _ChatEntry(
-        avatar: CircleAvatar(
-          backgroundColor: Colors.grey.shade200,
-          child: Icon(Icons.receipt_long, color: Colors.grey.shade700),
-        ),
-        title: 'Order #${o.orderCode}',
-        subtitle: _orderStatusMessage(o.status),
-        time: o.placedAt != null ? DateTime.tryParse(o.placedAt!) : null,
-        onTap: () => Navigator.of(context).push(
-          MaterialPageRoute(builder: (_) => OrderTrackScreen(orderCode: o.orderCode)),
-        ),
-      );
-    }).toList();
   }
 
   String _relativeTime(DateTime? d) {
@@ -169,9 +122,9 @@ class _ChatsListScreenState extends State<ChatsListScreen> with SingleTickerProv
         ],
       ),
     );
-    if (confirmed == true && e.threadId != null) {
+    if (confirmed == true) {
       try {
-        await ChatService.deleteThread(e.threadId!);
+        await ChatService.deleteThread(e.threadId);
       } catch (err) {
         if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Could not delete: $err')));
       }
@@ -201,11 +154,6 @@ class _ChatsListScreenState extends State<ChatsListScreen> with SingleTickerProv
       onTap: e.onTap,
     );
 
-    // Only real chat threads (support/restaurant) are swipe-to-delete —
-    // an order entry is just a shortcut into order tracking, not a
-    // conversation of its own to delete.
-    if (e.threadId == null) return tile;
-
     return Dismissible(
       key: ValueKey(e.threadId),
       direction: DismissDirection.endToStart,
@@ -224,91 +172,6 @@ class _ChatsListScreenState extends State<ChatsListScreen> with SingleTickerProv
       },
       child: tile,
     );
-  }
-
-  Widget _list(List<_ChatEntry> entries, String emptyText) {
-    final filtered = _filtered(entries);
-    if (filtered.isEmpty) {
-      return ListView(children: [
-        const SizedBox(height: 120),
-        Center(child: Text(emptyText, style: TextStyle(color: Colors.grey.shade600))),
-      ]);
-    }
-    return ListView.separated(
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      itemCount: filtered.length,
-      separatorBuilder: (_, __) => Divider(height: 1, color: Colors.grey.shade200, indent: 72),
-      itemBuilder: (context, i) => _entryTile(filtered[i]),
-    );
-  }
-
-  Widget _threadsStreamBuilder(Widget Function(List<Map<String, dynamic>> threads) builder) {
-    if (_connecting) return const Center(child: CircularProgressIndicator());
-    if (_connectError != null) {
-      return Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Text(_connectError!, textAlign: TextAlign.center, style: TextStyle(color: Colors.grey.shade600)),
-        ),
-      );
-    }
-    return StreamBuilder<List<Map<String, dynamic>>>(
-      stream: ChatService.myThreads(),
-      builder: (context, snap) {
-        if (snap.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator());
-        }
-        if (snap.hasError) {
-          return Center(child: Text('${snap.error}'));
-        }
-        return builder(snap.data ?? []);
-      },
-    );
-  }
-
-  Widget _supportTab() {
-    return _threadsStreamBuilder((threads) {
-      final entries = threads.where((t) => t['recipientRole'] == 'admin').map(_threadEntry).toList();
-      return _list(entries, 'No support conversations yet.');
-    });
-  }
-
-  Widget _ordersTab() {
-    return FutureBuilder<List<OrderSummary>>(
-      future: _ordersFuture,
-      builder: (context, snap) {
-        if (snap.connectionState != ConnectionState.done) {
-          return const Center(child: CircularProgressIndicator());
-        }
-        if (snap.hasError) {
-          return Center(child: Text('${snap.error}'));
-        }
-        return _list(_orderEntries(snap.data ?? []), 'No orders yet.');
-      },
-    );
-  }
-
-  Widget _allTab() {
-    return _threadsStreamBuilder((threads) {
-      return FutureBuilder<List<OrderSummary>>(
-        future: _ordersFuture,
-        builder: (context, ordersSnap) {
-          if (ordersSnap.connectionState != ConnectionState.done) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          final entries = <_ChatEntry>[
-            ...threads.map(_threadEntry),
-            ..._orderEntries(ordersSnap.data ?? []),
-          ];
-          entries.sort((a, b) {
-            final at = a.time ?? DateTime.fromMillisecondsSinceEpoch(0);
-            final bt = b.time ?? DateTime.fromMillisecondsSinceEpoch(0);
-            return bt.compareTo(at);
-          });
-          return _list(entries, 'No conversations yet.');
-        },
-      );
-    });
   }
 
   @override
@@ -333,27 +196,40 @@ class _ChatsListScreenState extends State<ChatsListScreen> with SingleTickerProv
               ),
             ),
           ),
-          TabBar(
-            controller: _tabController,
-            isScrollable: true,
-            labelColor: AppTheme.primary,
-            indicatorColor: AppTheme.primary,
-            unselectedLabelColor: Colors.grey,
-            tabs: [
-              Tab(text: t.chatsTabAll),
-              Tab(text: t.chatsTabOrders),
-              Tab(text: t.chatsTabSupport),
-            ],
-          ),
           Expanded(
-            child: TabBarView(
-              controller: _tabController,
-              children: [
-                _allTab(),
-                _ordersTab(),
-                _supportTab(),
-              ],
-            ),
+            child: _connecting
+                ? const Center(child: CircularProgressIndicator())
+                : _connectError != null
+                    ? Center(
+                        child: Padding(
+                          padding: const EdgeInsets.all(24),
+                          child: Text(_connectError!, textAlign: TextAlign.center, style: TextStyle(color: Colors.grey.shade600)),
+                        ),
+                      )
+                    : StreamBuilder<List<Map<String, dynamic>>>(
+                        stream: ChatService.myThreads(),
+                        builder: (context, snap) {
+                          if (snap.connectionState == ConnectionState.waiting) {
+                            return const Center(child: CircularProgressIndicator());
+                          }
+                          if (snap.hasError) {
+                            return Center(child: Text('${snap.error}'));
+                          }
+                          final entries = _filtered((snap.data ?? []).map(_threadEntry).toList());
+                          if (entries.isEmpty) {
+                            return ListView(children: [
+                              const SizedBox(height: 120),
+                              Center(child: Text('No conversations yet.', style: TextStyle(color: Colors.grey.shade600))),
+                            ]);
+                          }
+                          return ListView.separated(
+                            padding: const EdgeInsets.symmetric(vertical: 8),
+                            itemCount: entries.length,
+                            separatorBuilder: (_, __) => Divider(height: 1, color: Colors.grey.shade200, indent: 72),
+                            itemBuilder: (context, i) => _entryTile(entries[i]),
+                          );
+                        },
+                      ),
           ),
         ],
       ),

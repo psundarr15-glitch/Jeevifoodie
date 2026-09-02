@@ -1,4 +1,6 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import '../../models/chat_message.dart';
 import '../../services/chat_service.dart';
 import '../../theme.dart';
@@ -71,6 +73,51 @@ class _ChatScreenState extends State<ChatScreen> {
     } finally {
       if (mounted) setState(() => _sending = false);
     }
+  }
+
+  Future<void> _pickAndSendImage() async {
+    final source = await showModalBottomSheet<ImageSource>(
+      context: context,
+      builder: (context) => SafeArea(
+        child: Wrap(
+          children: [
+            ListTile(
+              leading: const Icon(Icons.photo_camera_outlined),
+              title: const Text('Take a photo'),
+              onTap: () => Navigator.of(context).pop(ImageSource.camera),
+            ),
+            ListTile(
+              leading: const Icon(Icons.photo_library_outlined),
+              title: const Text('Choose from gallery'),
+              onTap: () => Navigator.of(context).pop(ImageSource.gallery),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (source == null) return;
+
+    final picked = await ImagePicker().pickImage(source: source, imageQuality: 80, maxWidth: 1600);
+    if (picked == null || !mounted) return;
+
+    setState(() => _sending = true);
+    try {
+      await _chatService.sendImage(File(picked.path));
+    } catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Could not send photo: $e')));
+    } finally {
+      if (mounted) setState(() => _sending = false);
+    }
+  }
+
+  void _openImageViewer(String url) {
+    Navigator.of(context).push(MaterialPageRoute(
+      builder: (_) => Scaffold(
+        backgroundColor: Colors.black,
+        appBar: AppBar(backgroundColor: Colors.black, iconTheme: const IconThemeData(color: Colors.white)),
+        body: Center(child: InteractiveViewer(child: Image.network(url))),
+      ),
+    ));
   }
 
   Future<void> _confirmEndChat(AppLocalizations t) async {
@@ -231,10 +278,14 @@ class _ChatScreenState extends State<ChatScreen> {
                             }
                             rows.add(Align(
                               alignment: m.isMine ? Alignment.centerRight : Alignment.centerLeft,
-                              child: Container(
+                              child: GestureDetector(
+                                onTap: m.isImage && m.imageUrl != null ? () => _openImageViewer(m.imageUrl!) : null,
+                                child: Container(
                                 constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.75),
                                 margin: const EdgeInsets.symmetric(vertical: 3),
-                                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                                padding: m.isImage
+                                    ? const EdgeInsets.all(6)
+                                    : const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                                 decoration: BoxDecoration(
                                   color: m.isMine ? AppTheme.primary : Colors.white,
                                   borderRadius: BorderRadius.circular(14),
@@ -243,10 +294,32 @@ class _ChatScreenState extends State<ChatScreen> {
                                   crossAxisAlignment: CrossAxisAlignment.end,
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
-                                    Text(
-                                      m.message,
-                                      style: TextStyle(color: m.isMine ? Colors.white : Colors.black87, fontSize: 14.5),
-                                    ),
+                                    if (m.isImage && m.imageUrl != null)
+                                      ClipRRect(
+                                        borderRadius: BorderRadius.circular(10),
+                                        child: Image.network(
+                                          m.imageUrl!,
+                                          fit: BoxFit.cover,
+                                          loadingBuilder: (context, child, progress) {
+                                            if (progress == null) return child;
+                                            return const SizedBox(
+                                              width: 160,
+                                              height: 160,
+                                              child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
+                                            );
+                                          },
+                                          errorBuilder: (context, error, stack) => const SizedBox(
+                                            width: 160,
+                                            height: 160,
+                                            child: Icon(Icons.broken_image_outlined, color: Colors.grey),
+                                          ),
+                                        ),
+                                      )
+                                    else
+                                      Text(
+                                        m.message,
+                                        style: TextStyle(color: m.isMine ? Colors.white : Colors.black87, fontSize: 14.5),
+                                      ),
                                     const SizedBox(height: 3),
                                     Row(
                                       mainAxisSize: MainAxisSize.min,
@@ -255,7 +328,9 @@ class _ChatScreenState extends State<ChatScreen> {
                                           _timeLabel(m.createdAt),
                                           style: TextStyle(
                                             fontSize: 10.5,
-                                            color: m.isMine ? Colors.white70 : Colors.grey.shade600,
+                                            color: m.isMine
+                                                ? (m.isImage ? Colors.black45 : Colors.white70)
+                                                : Colors.grey.shade600,
                                           ),
                                         ),
                                         // Sent indicator — a real read-receipt
@@ -267,12 +342,13 @@ class _ChatScreenState extends State<ChatScreen> {
                                         // server.
                                         if (m.isMine) ...[
                                           const SizedBox(width: 3),
-                                          const Icon(Icons.done_all, size: 13, color: Colors.white70),
+                                          Icon(Icons.done_all, size: 13, color: m.isImage ? Colors.black45 : Colors.white70),
                                         ],
                                       ],
                                     ),
                                   ],
                                 ),
+                              ),
                               ),
                             ));
                           }
@@ -309,12 +385,8 @@ class _ChatScreenState extends State<ChatScreen> {
                 children: [
                   IconButton(
                     icon: Icon(Icons.attach_file, color: Colors.grey.shade500),
-                    tooltip: 'Attachments coming soon',
-                    onPressed: () {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Sending photos/files isn\'t available yet.')),
-                      );
-                    },
+                    tooltip: 'Send a photo',
+                    onPressed: (_connecting || _connectError != null || _sending) ? null : _pickAndSendImage,
                   ),
                   Expanded(
                     child: TextField(
