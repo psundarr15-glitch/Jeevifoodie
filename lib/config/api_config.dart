@@ -56,6 +56,7 @@ class ApiConfig {
   static const String pagePrivacy = '$baseUrl/pages/privacy';
   static const String pageRefundPolicy = '$baseUrl/pages/refund-policy';
   static const String pageShippingPolicy = '$baseUrl/pages/shipping-policy';
+  static const String pageSupport = '$baseUrl/pages/support';
 
   static const String deliveryPartnerRegister = '$baseUrl/delivery/register';
   static const String vendorRegister = '$baseUrl/vendor/register';

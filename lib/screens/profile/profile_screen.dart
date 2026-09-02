@@ -8,10 +8,10 @@ import '../../theme.dart';
 import '../auth/login_screen.dart';
 import '../orders/orders_screen.dart';
 import 'addresses_screen.dart';
-import 'contact_screen.dart';
 import 'coupons_screen.dart';
 import 'delivery_partner_signup_screen.dart';
 import 'edit_profile_screen.dart';
+import 'help_support_screen.dart';
 import 'language_screen.dart';
 import 'payment_methods_screen.dart';
 import 'static_page_screen.dart';
@@ -137,7 +137,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 _MenuTile(
                   icon: Icons.translate,
                   label: t.language,
-                  onTap: () => _push(const LanguageScreen()),
+                  onTap: () => showLanguagePicker(context),
                 ),
               ]),
               _SectionLabel(t.promotionalActivitySection),
@@ -181,10 +181,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 _MenuTile(
                   icon: Icons.headset_mic_outlined,
                   label: t.helpSupport,
-                  onTap: () => _push(ContactScreen(
-                    title: t.helpSupport,
-                    message: t.helpSupportMessage,
-                  )),
+                  onTap: () => _push(const HelpSupportScreen()),
                 ),
                 _MenuTile(
                   icon: Icons.info_outline,
