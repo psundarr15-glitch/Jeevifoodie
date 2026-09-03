@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../services/api_client.dart';
 import '../services/cart_service.dart';
 import '../services/notification_service.dart';
@@ -7,8 +8,14 @@ class AppState extends ChangeNotifier {
   bool isLoggedIn = false;
   int cartCount = 0;
   Map<String, dynamic>? currentUser;
+  bool notificationsEnabled = true;
+
+  static const _notifPrefsKey = 'notifications_enabled';
 
   Future<void> bootstrap() async {
+    final prefs = await SharedPreferences.getInstance();
+    notificationsEnabled = prefs.getBool(_notifPrefsKey) ?? true;
+
     final token = await ApiClient.getToken();
     isLoggedIn = token != null;
     if (isLoggedIn) {
@@ -18,6 +25,18 @@ class AppState extends ChangeNotifier {
       NotificationService.registerCurrentToken();
     }
     notifyListeners();
+  }
+
+  Future<void> setNotificationsEnabled(bool value) async {
+    notificationsEnabled = value;
+    notifyListeners();
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_notifPrefsKey, value);
+    if (value) {
+      NotificationService.registerCurrentToken();
+    } else {
+      NotificationService.unregisterCurrentToken();
+    }
   }
 
   void setLoggedIn(Map<String, dynamic> user) {

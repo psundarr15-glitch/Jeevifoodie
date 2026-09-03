@@ -80,6 +80,7 @@
 
   "generalSection": "General",
   "profileLabel": "Profile",
+  "profile": "Profile",
   "myAddress": "My Address",
   "language": "Language",
   "chooseYourLanguage": "Choose Your Language",
@@ -118,6 +119,17 @@
   "myOrders": "My Orders",
   "paymentMethods": "Payment Methods",
   "logout": "Logout",
+  "cancel": "Cancel",
+  "changePassword": "Change Password",
+  "deleteAccount": "Delete Account",
+  "deleteAccountWarning": "This will permanently remove your access to this account. This can't be undone.",
+  "passwordMinLength": "Password must be at least 6 characters",
+  "passwordsDontMatch": "Passwords don't match",
+  "totalOrders": "Total Order",
+  "walletBalance": "Wallet Balance",
+  "darkMode": "Dark Mode",
+  "notifications": "Notification",
+  "versionLabel": "Version:",
   "errorLabel": "Error: {error}",
   "@errorLabel": {"placeholders": {"error": {"type": "String"}}},
 
@@ -204,6 +216,8 @@
 
   "addresses": "Addresses",
   "noSavedAddressesYet": "No saved addresses yet",
+  "noSavedAddressFoundTitle": "No saved address found",
+  "noSavedAddressFoundSubtitle": "Please add your address for your better experience",
   "setAsDefault": "Set as default",
   "delete": "Delete",
 

@@ -79,6 +79,20 @@ class NotificationService {
     if (token != null) await _registerToken(token);
   }
 
+  /// Counterpart to [registerCurrentToken] — called when the customer
+  /// turns off Notifications in Profile > Account.
+  static Future<void> unregisterCurrentToken() async {
+    try {
+      final token = await _messaging.getToken();
+      if (token != null) {
+        await ApiClient.post(ApiConfig.unregisterDeviceToken, {'fcm_token': token});
+      }
+    } catch (_) {
+      // Not logged in, or a transient network error - the toggle itself
+      // still persists locally either way.
+    }
+  }
+
   static Future<void> _registerToken(String token) async {
     try {
       await ApiClient.post(ApiConfig.deviceToken, {'fcm_token': token, 'platform': 'android'});

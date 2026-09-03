@@ -80,6 +80,7 @@
 
   "generalSection": "பொது",
   "profileLabel": "சுயவிவரம்",
+  "profile": "சுயவிவரம்",
   "myAddress": "எனது முகவரி",
   "language": "மொழி",
   "chooseYourLanguage": "உங்கள் மொழியைத் தேர்ந்தெடுக்கவும்",
@@ -118,6 +119,17 @@
   "myOrders": "எனது ஆர்டர்கள்",
   "paymentMethods": "பணம் செலுத்தும் முறைகள்",
   "logout": "வெளியேறு",
+  "cancel": "ரத்து செய்",
+  "changePassword": "கடவுச்சொல்லை மாற்று",
+  "deleteAccount": "கணக்கை நீக்கு",
+  "deleteAccountWarning": "இது உங்கள் கணக்கு அணுகலை நிரந்தரமாக நீக்கிவிடும். இதை மீட்க முடியாது.",
+  "passwordMinLength": "கடவுச்சொல் குறைந்தது 6 எழுத்துகள் இருக்க வேண்டும்",
+  "passwordsDontMatch": "கடவுச்சொற்கள் பொருந்தவில்லை",
+  "totalOrders": "மொத்த ஆர்டர்",
+  "walletBalance": "வாலட் இருப்பு",
+  "darkMode": "இருண்ட பயன்முறை",
+  "notifications": "அறிவிப்பு",
+  "versionLabel": "பதிப்பு:",
   "errorLabel": "பிழை: {error}",
   "@errorLabel": {"placeholders": {"error": {"type": "String"}}},
 
@@ -204,6 +216,8 @@
 
   "addresses": "முகவரிகள்",
   "noSavedAddressesYet": "இதுவரை சேமிக்கப்பட்ட முகவரிகள் இல்லை",
+  "noSavedAddressFoundTitle": "சேமிக்கப்பட்ட முகவரி இல்லை",
+  "noSavedAddressFoundSubtitle": "சிறந்த அனுபவத்திற்காக உங்கள் முகவரியைச் சேர்க்கவும்",
   "setAsDefault": "இயல்புநிலையாக அமைக்கவும்",
   "delete": "நீக்கு",
 

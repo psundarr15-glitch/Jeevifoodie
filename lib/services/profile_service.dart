@@ -23,9 +23,25 @@ class ProfileService {
     await ApiClient.post(ApiConfig.profileUpdate, {'name': name, 'phone': phone});
   }
 
+  static Future<void> changePassword({required String currentPassword, required String newPassword}) async {
+    await ApiClient.post(ApiConfig.changePassword, {
+      'current_password': currentPassword,
+      'new_password': newPassword,
+    });
+  }
+
+  static Future<void> deleteAccount({required String password}) async {
+    await ApiClient.post(ApiConfig.deleteAccount, {'password': password});
+  }
+
   static Future<Address> addAddress({
     required String label,
+    String? contactName,
+    String? contactPhone,
     required String addressLine,
+    String? streetNumber,
+    String? house,
+    String? floor,
     required String city,
     required String state,
     required String pincode,
@@ -35,7 +51,12 @@ class ProfileService {
   }) async {
     final res = await ApiClient.post(ApiConfig.addAddress, {
       'label': label,
+      if (contactName != null && contactName.isNotEmpty) 'contact_name': contactName,
+      if (contactPhone != null && contactPhone.isNotEmpty) 'contact_phone': contactPhone,
       'address_line': addressLine,
+      if (streetNumber != null && streetNumber.isNotEmpty) 'street_number': streetNumber,
+      if (house != null && house.isNotEmpty) 'house': house,
+      if (floor != null && floor.isNotEmpty) 'floor': floor,
       'city': city,
       'state': state,
       'pincode': pincode,

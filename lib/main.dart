@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'state/app_state.dart';
 import 'state/locale_provider.dart';
+import 'state/theme_provider.dart';
 import 'theme.dart';
 import 'l10n/app_localizations.dart';
 import 'screens/splash_screen.dart';
@@ -30,12 +31,16 @@ void main() async {
   final localeProvider = LocaleProvider();
   await localeProvider.load();
 
-  runApp(CustomerApp(localeProvider: localeProvider));
+  final themeProvider = ThemeProvider();
+  await themeProvider.load();
+
+  runApp(CustomerApp(localeProvider: localeProvider, themeProvider: themeProvider));
 }
 
 class CustomerApp extends StatelessWidget {
   final LocaleProvider localeProvider;
-  const CustomerApp({super.key, required this.localeProvider});
+  final ThemeProvider themeProvider;
+  const CustomerApp({super.key, required this.localeProvider, required this.themeProvider});
 
   @override
   Widget build(BuildContext context) {
@@ -43,12 +48,15 @@ class CustomerApp extends StatelessWidget {
       providers: [
         ChangeNotifierProvider(create: (_) => AppState()),
         ChangeNotifierProvider.value(value: localeProvider),
+        ChangeNotifierProvider.value(value: themeProvider),
       ],
-      child: Consumer<LocaleProvider>(
-        builder: (context, locale, _) => MaterialApp(
+      child: Consumer2<LocaleProvider, ThemeProvider>(
+        builder: (context, locale, themeMode, _) => MaterialApp(
           title: 'Jeevi Foodie',
           debugShowCheckedModeBanner: false,
           theme: AppTheme.light(),
+          darkTheme: AppTheme.dark(),
+          themeMode: themeMode.themeMode,
           navigatorKey: navigatorKey,
           locale: locale.locale,
           supportedLocales: const [Locale('en'), Locale('ta')],

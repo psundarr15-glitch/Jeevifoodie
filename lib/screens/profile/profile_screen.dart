@@ -10,7 +10,7 @@ import '../orders/orders_screen.dart';
 import 'addresses_screen.dart';
 import 'coupons_screen.dart';
 import 'delivery_partner_signup_screen.dart';
-import 'edit_profile_screen.dart';
+import 'account_screen.dart';
 import 'help_support_screen.dart';
 import 'language_screen.dart';
 import 'payment_methods_screen.dart';
@@ -117,16 +117,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   icon: Icons.person_outline,
                   label: t.profileLabel,
                   onTap: () async {
-                    final updated = await Navigator.of(context).push<bool>(
-                      MaterialPageRoute(
-                        builder: (_) => EditProfileScreen(
-                          name: name,
-                          phone: user['phone']?.toString() ?? '',
-                          email: user['email']?.toString() ?? '',
-                        ),
-                      ),
-                    );
-                    if (updated == true) setState(() => _future = ProfileService.view());
+                    await Navigator.of(context).push(MaterialPageRoute(builder: (_) => const AccountScreen()));
+                    setState(() => _future = ProfileService.view());
                   },
                 ),
                 _MenuTile(

@@ -31,6 +31,9 @@ class ApiConfig {
   static String deleteAddress(int id) => '$baseUrl/customer/profile/address/delete/$id';
   static const String wallet = '$baseUrl/customer/wallet';
   static const String deviceToken = '$baseUrl/customer/device-token';
+  static const String unregisterDeviceToken = '$baseUrl/customer/device-token/unregister';
+  static const String changePassword = '$baseUrl/customer/change-password';
+  static const String deleteAccount = '$baseUrl/customer/delete-account';
   static const String notifications = '$baseUrl/customer/notifications';
   static const String coupons = '$baseUrl/customer/coupons';
 
