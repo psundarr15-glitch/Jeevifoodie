@@ -8,6 +8,8 @@ class ApiConfig {
   static const String logout = '$baseUrl/customer/logout';
   static const String forgotPassword = '$baseUrl/customer/forgot-password';
   static const String resetPassword = '$baseUrl/customer/reset-password';
+  static const String sendOtp = '$baseUrl/customer/auth/send-otp';
+  static const String verifyOtp = '$baseUrl/customer/auth/verify-otp';
 
   static const String home = '$baseUrl/customer/home';
   static const String restaurants = '$baseUrl/customer/restaurants';

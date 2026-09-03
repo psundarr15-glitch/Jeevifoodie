@@ -5,7 +5,7 @@ import '../../services/profile_service.dart';
 import '../../services/auth_service.dart';
 import '../../state/app_state.dart';
 import '../../theme.dart';
-import '../auth/login_screen.dart';
+import '../auth/phone_login_screen.dart';
 import '../orders/orders_screen.dart';
 import 'addresses_screen.dart';
 import 'coupons_screen.dart';
@@ -40,7 +40,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     if (!mounted) return;
     context.read<AppState>().logout();
     Navigator.of(context).pushAndRemoveUntil(
-      MaterialPageRoute(builder: (_) => const LoginScreen()),
+      MaterialPageRoute(builder: (_) => const PhoneLoginScreen()),
       (route) => false,
     );
   }

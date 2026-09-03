@@ -62,4 +62,22 @@ class AuthService {
       'password': newPassword,
     });
   }
+
+  /// Phone + OTP login (via Twilio) - the app's only login method now.
+  /// A phone with no existing account is silently signed up here too;
+  /// there's no separate register step.
+  static Future<void> sendOtp({required String phone}) async {
+    await ApiClient.post(ApiConfig.sendOtp, {'phone': phone});
+  }
+
+  /// Returns the logged-in user plus whether this was their first-ever
+  /// login (no name on file yet) - CompleteProfileScreen uses that flag.
+  static Future<(Map<String, dynamic>, bool)> verifyOtp({
+    required String phone,
+    required String otp,
+  }) async {
+    final res = await ApiClient.post(ApiConfig.verifyOtp, {'phone': phone, 'otp': otp});
+    await ApiClient.setToken(res['token']?.toString());
+    return (res['user'] as Map<String, dynamic>, res['is_new_user'] == true);
+  }
 }
