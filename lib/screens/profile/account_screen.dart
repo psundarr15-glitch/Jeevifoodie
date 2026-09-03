@@ -125,7 +125,7 @@ class _AccountScreenState extends State<AccountScreen> {
                       ),
                     ),
                     IconButton.filled(
-                      style: IconButton.styleFrom(backgroundColor: Colors.white),
+                      style: IconButton.styleFrom(backgroundColor: AppTheme.surface(context)),
                       icon: const Icon(Icons.edit, size: 18, color: AppTheme.primary),
                       onPressed: () async {
                         await Navigator.of(context).push(MaterialPageRoute(

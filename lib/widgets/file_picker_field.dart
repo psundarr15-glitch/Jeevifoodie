@@ -109,7 +109,7 @@ class _FilePickerFieldState extends State<FilePickerField> {
                     child: Text(
                       _file == null ? 'Tap to upload' : _file!.path.split('/').last,
                       overflow: TextOverflow.ellipsis,
-                      style: TextStyle(color: _file == null ? Colors.grey.shade600 : Colors.black87, fontSize: 13),
+                      style: TextStyle(color: _file == null ? Colors.grey.shade600 : AppTheme.textPrimary(context), fontSize: 13),
                     ),
                   ),
                   Icon(_file == null ? Icons.upload_outlined : Icons.check_circle, color: _file == null ? Colors.grey : AppTheme.primary, size: 20),

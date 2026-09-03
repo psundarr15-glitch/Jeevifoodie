@@ -57,7 +57,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFFFF3EC),
       body: FutureBuilder<ProfileData>(
         future: _future,
         builder: (context, snap) {
@@ -250,7 +249,7 @@ class _SectionCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16),
-      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16)),
+      decoration: BoxDecoration(color: AppTheme.surface(context), borderRadius: BorderRadius.circular(16)),
       child: Column(
         children: [
           for (int i = 0; i < children.length; i++) ...[

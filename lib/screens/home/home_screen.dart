@@ -32,7 +32,6 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFFFFBF5),
       body: RefreshIndicator(
         onRefresh: _refresh,
         child: FutureBuilder<HomeData>(
@@ -168,7 +167,7 @@ class _GreenHeader extends StatelessWidget {
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: AppTheme.surface(context),
                   borderRadius: BorderRadius.circular(14),
                   boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.08), blurRadius: 10, offset: const Offset(0, 4))],
                 ),
@@ -356,7 +355,7 @@ class _CategoryItem extends StatelessWidget {
         children: [
           CircleAvatar(
             radius: 28,
-            backgroundColor: isMore ? AppTheme.primary : Colors.white,
+            backgroundColor: isMore ? AppTheme.primary : AppTheme.surface(context),
             backgroundImage: icon != null ? NetworkImage(icon!) : null,
             child: icon == null
                 ? Icon(fallbackIcon, color: isMore ? Colors.white : AppTheme.primary, size: 24)
@@ -467,7 +466,11 @@ class _DealCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(label, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13.5)),
+          // This card's background is a fixed pastel accent color (not
+          // theme-aware - see _bgColors), so its text must stay dark
+          // regardless of app theme, unlike most text elsewhere in this
+          // screen which follows the theme's default color.
+          Text(label, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13.5, color: Colors.black87)),
           const SizedBox(height: 4),
           Text(AppLocalizations.of(context)!.codeLabel(coupon['code'].toString()), style: TextStyle(color: Colors.grey.shade700, fontSize: 11.5)),
           const Spacer(),

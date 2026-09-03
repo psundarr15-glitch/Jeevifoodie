@@ -46,7 +46,7 @@ class _CouponsScreenState extends State<CouponsScreen> {
                 margin: const EdgeInsets.only(bottom: 12),
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: AppTheme.surface(context),
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(color: AppTheme.gold, width: 1.2, style: BorderStyle.solid),
                 ),

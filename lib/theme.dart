@@ -17,6 +17,22 @@ class AppTheme {
   static const gold = Color(0xFFF7B500); // CTA accent on dark/red backgrounds
   static const success = Color(0xFFD6291B); // rating badges / accent text on white cards
 
+  /// Semantic helpers so screens don't hardcode "white card" / "black87
+  /// text" and then silently break under dark mode - use these instead
+  /// of Colors.white/Colors.black87 for anything that's a general
+  /// surface or body text (NOT for text/icons sitting permanently on
+  /// top of AppTheme.primary or another fixed-color banner, which should
+  /// stay white in both themes).
+  static Color surface(BuildContext context) =>
+      Theme.of(context).brightness == Brightness.dark ? const Color(0xFF1E1B1A) : Colors.white;
+  static Color scaffoldBg(BuildContext context) => Theme.of(context).scaffoldBackgroundColor;
+  static Color textPrimary(BuildContext context) =>
+      Theme.of(context).brightness == Brightness.dark ? Colors.white : Colors.black87;
+  static Color textSecondary(BuildContext context) =>
+      Theme.of(context).brightness == Brightness.dark ? Colors.grey.shade400 : Colors.grey.shade600;
+  static Color borderColor(BuildContext context) =>
+      Theme.of(context).brightness == Brightness.dark ? Colors.grey.shade700 : Colors.grey.shade300;
+
   static ThemeData light() {
     return ThemeData(
       useMaterial3: true,
@@ -85,6 +101,7 @@ class AppTheme {
     return ThemeData(
       useMaterial3: true,
       brightness: Brightness.dark,
+      scaffoldBackgroundColor: const Color(0xFF141110),
       colorScheme: ColorScheme.fromSeed(seedColor: primary, primary: primary, brightness: Brightness.dark),
       appBarTheme: const AppBarTheme(elevation: 0, centerTitle: false),
       elevatedButtonTheme: ElevatedButtonThemeData(

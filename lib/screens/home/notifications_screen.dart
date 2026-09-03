@@ -57,7 +57,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: Colors.white,
+      backgroundColor: AppTheme.surface(context),
       shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(18))),
       builder: (context) => Padding(
         padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
@@ -168,7 +168,7 @@ class _NotificationTile extends StatelessWidget {
       child: Container(
         margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
         padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(14)),
+        decoration: BoxDecoration(color: AppTheme.surface(context), borderRadius: BorderRadius.circular(14)),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [

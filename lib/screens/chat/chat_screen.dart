@@ -168,7 +168,6 @@ class _ChatScreenState extends State<ChatScreen> {
     final emptyText = widget.restaurantId != null ? t.chatRestaurantEmptyState : t.chatEmptyState;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFFFF3EC),
       appBar: AppBar(
         titleSpacing: 0,
         title: Row(
@@ -287,7 +286,7 @@ class _ChatScreenState extends State<ChatScreen> {
                                     ? const EdgeInsets.all(6)
                                     : const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                                 decoration: BoxDecoration(
-                                  color: m.isMine ? AppTheme.primary : Colors.white,
+                                  color: m.isMine ? AppTheme.primary : AppTheme.surface(context),
                                   borderRadius: BorderRadius.circular(14),
                                 ),
                                 child: Column(
@@ -318,7 +317,7 @@ class _ChatScreenState extends State<ChatScreen> {
                                     else
                                       Text(
                                         m.message,
-                                        style: TextStyle(color: m.isMine ? Colors.white : Colors.black87, fontSize: 14.5),
+                                        style: TextStyle(color: m.isMine ? Colors.white : AppTheme.textPrimary(context), fontSize: 14.5),
                                       ),
                                     const SizedBox(height: 3),
                                     Row(
