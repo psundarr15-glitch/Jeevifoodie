@@ -1,12 +1,16 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import '../../config/api_config.dart';
 import '../../services/auth_service.dart';
-import '../../state/app_state.dart';
-import '../../widgets/root_shell.dart';
+import '../../theme.dart';
 import '../../l10n/app_localizations.dart';
-import 'forgot_password_screen.dart';
+import 'otp_verify_screen.dart';
 import 'register_screen.dart';
+import '../profile/static_page_screen.dart';
 
+/// Login only - a phone with no registered account is rejected here (see
+/// PhoneAuthApiController::sendOtp()), matching the "Login" vs "Register"
+/// split in the reference design rather than silently auto-signing-up.
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
   @override
@@ -15,26 +19,38 @@ class LoginScreen extends StatefulWidget {
 
 class _LoginScreenState extends State<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
-  final _email = TextEditingController();
-  final _password = TextEditingController();
-  bool _obscure = true;
+  final _phone = TextEditingController();
+  bool _rememberMe = true;
+  bool _agreedToTerms = false;
   bool _loading = false;
   String? _error;
 
-  Future<void> _submit() async {
+  static const _rememberMeKey = 'remember_me';
+
+  @override
+  void dispose() {
+    _phone.dispose();
+    super.dispose();
+  }
+
+  Future<void> _login() async {
     if (!_formKey.currentState!.validate()) return;
+    final t = AppLocalizations.of(context)!;
+    if (!_agreedToTerms) {
+      setState(() => _error = t.pleaseAgreeToTerms);
+      return;
+    }
     setState(() {
       _loading = true;
       _error = null;
     });
+    final phone = _phone.text.trim();
     try {
-      final user = await AuthService.login(email: _email.text.trim(), password: _password.text);
+      await AuthService.sendOtp(phone: phone);
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool(_rememberMeKey, _rememberMe);
       if (!mounted) return;
-      context.read<AppState>().setLoggedIn(user);
-      Navigator.of(context).pushAndRemoveUntil(
-        MaterialPageRoute(builder: (_) => const RootShell()),
-        (route) => false,
-      );
+      Navigator.of(context).push(MaterialPageRoute(builder: (_) => OtpVerifyScreen(phone: phone)));
     } catch (e) {
       setState(() => _error = e.toString());
     } finally {
@@ -46,67 +62,81 @@ class _LoginScreenState extends State<LoginScreen> {
   Widget build(BuildContext context) {
     final t = AppLocalizations.of(context)!;
     return Scaffold(
+      appBar: AppBar(),
       body: SafeArea(
         child: Padding(
-          padding: const EdgeInsets.all(24),
+          padding: const EdgeInsets.symmetric(horizontal: 24),
           child: Form(
             key: _formKey,
             child: ListView(
               children: [
-                const SizedBox(height: 48),
-                Text(t.welcomeBack, style: Theme.of(context).textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.w900)),
-                const SizedBox(height: 8),
-                Text(t.loginToContinue, style: TextStyle(color: Colors.grey.shade600)),
                 const SizedBox(height: 32),
-                TextFormField(
-                  controller: _email,
-                  keyboardType: TextInputType.emailAddress,
-                  decoration: InputDecoration(labelText: t.email, prefixIcon: const Icon(Icons.mail_outline)),
-                  validator: (v) => (v == null || !v.contains('@')) ? t.validatorValidEmail : null,
+                Center(
+                  child: Image.asset('assets/icon/icon.png', height: 96, errorBuilder: (_, __, ___) => Icon(Icons.storefront_rounded, color: AppTheme.primary, size: 72)),
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 32),
+                Text(t.loginTitle, style: const TextStyle(fontSize: 26, fontWeight: FontWeight.bold)),
+                const SizedBox(height: 20),
                 TextFormField(
-                  controller: _password,
-                  obscureText: _obscure,
+                  controller: _phone,
+                  keyboardType: TextInputType.phone,
+                  maxLength: 10,
                   decoration: InputDecoration(
-                    labelText: t.password,
-                    prefixIcon: const Icon(Icons.lock_outline),
-                    suffixIcon: IconButton(
-                      icon: Icon(_obscure ? Icons.visibility_outlined : Icons.visibility_off_outlined),
-                      onPressed: () => setState(() => _obscure = !_obscure),
+                    labelText: t.phoneLabel,
+                    counterText: '',
+                    prefixIcon: const Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 12),
+                      child: Text('🇮🇳 +91', style: TextStyle(fontSize: 15)),
                     ),
+                    prefixIconConstraints: const BoxConstraints(minWidth: 0),
                   ),
-                  validator: (v) => (v == null || v.length < 6) ? t.validatorMin6Chars : null,
+                  validator: (v) => (v == null || !RegExp(r'^[0-9]{10}$').hasMatch(v.trim())) ? t.enterValidMobileNumber : null,
                 ),
-                Align(
-                  alignment: Alignment.centerRight,
-                  child: TextButton(
-                    onPressed: () => Navigator.of(context).push(
-                      MaterialPageRoute(builder: (_) => const ForgotPasswordScreen()),
+                const SizedBox(height: 8),
+                CheckboxListTile(
+                  value: _rememberMe,
+                  onChanged: (v) => setState(() => _rememberMe = v ?? true),
+                  controlAffinity: ListTileControlAffinity.leading,
+                  contentPadding: EdgeInsets.zero,
+                  title: Text(t.rememberMe),
+                ),
+                Row(
+                  children: [
+                    Checkbox(
+                      value: _agreedToTerms,
+                      onChanged: (v) => setState(() => _agreedToTerms = v ?? false),
                     ),
-                    child: Text(t.forgotPasswordQ),
-                  ),
+                    Expanded(
+                      child: Wrap(
+                        crossAxisAlignment: WrapCrossAlignment.center,
+                        children: [
+                          Text('${t.agreeWithThe} '),
+                          GestureDetector(
+                            onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const StaticPageScreen(url: ApiConfig.pageTerms))),
+                            child: Text(t.termsAndConditions, style: const TextStyle(color: AppTheme.primary, fontWeight: FontWeight.w600)),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                 ),
                 if (_error != null) ...[
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 10),
                   Text(_error!, style: const TextStyle(color: Colors.red)),
                 ],
-                const SizedBox(height: 24),
+                const SizedBox(height: 20),
                 ElevatedButton(
-                  onPressed: _loading ? null : _submit,
+                  onPressed: _loading ? null : _login,
                   child: _loading
                       ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                      : Text(t.login),
+                      : Text(t.loginTitle),
                 ),
-                const SizedBox(height: 16),
-                Center(
-                  child: TextButton(
-                    onPressed: () => Navigator.of(context).push(
-                      MaterialPageRoute(builder: (_) => const RegisterScreen()),
-                    ),
-                    child: Text(t.noAccountSignUp),
-                  ),
+                const SizedBox(height: 12),
+                OutlinedButton(
+                  onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const RegisterScreen())),
+                  child: Text(t.registerTitle),
                 ),
+                const SizedBox(height: 24),
               ],
             ),
           ),

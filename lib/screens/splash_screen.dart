@@ -5,7 +5,7 @@ import '../state/app_state.dart';
 import '../theme.dart';
 import '../l10n/app_localizations.dart';
 import 'onboarding_screen.dart';
-import 'auth/phone_login_screen.dart';
+import 'auth/login_screen.dart';
 import '../widgets/root_shell.dart';
 
 class SplashScreen extends StatefulWidget {
@@ -39,7 +39,7 @@ class _SplashScreenState extends State<SplashScreen> {
     }
 
     Navigator.of(context).pushReplacement(
-      MaterialPageRoute(builder: (_) => state.isLoggedIn ? const RootShell() : const PhoneLoginScreen()),
+      MaterialPageRoute(builder: (_) => state.isLoggedIn ? const RootShell() : const LoginScreen()),
     );
   }
 

@@ -30,8 +30,7 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
       _error = null;
     });
     try {
-      final phone = context.read<AppState>().currentUser?['phone']?.toString() ?? '';
-      await ProfileService.update(name: _name.text.trim(), phone: phone);
+      await ProfileService.update(name: _name.text.trim());
       if (!mounted) return;
       final user = Map<String, dynamic>.from(context.read<AppState>().currentUser ?? {});
       user['name'] = _name.text.trim();

@@ -7,7 +7,7 @@ import '../../state/app_state.dart';
 import '../../state/theme_provider.dart';
 import '../../theme.dart';
 import '../../l10n/app_localizations.dart';
-import '../auth/phone_login_screen.dart';
+import '../auth/login_screen.dart';
 import 'edit_profile_screen.dart';
 import 'change_password_screen.dart';
 
@@ -76,7 +76,7 @@ class _AccountScreenState extends State<AccountScreen> {
       if (!mounted) return;
       context.read<AppState>().logout();
       Navigator.of(context).pushAndRemoveUntil(
-        MaterialPageRoute(builder: (_) => const PhoneLoginScreen()),
+        MaterialPageRoute(builder: (_) => const LoginScreen()),
         (route) => false,
       );
     } catch (e) {

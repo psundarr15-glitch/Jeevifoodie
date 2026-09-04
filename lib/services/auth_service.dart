@@ -63,11 +63,14 @@ class AuthService {
     });
   }
 
-  /// Phone + OTP login (via Twilio) - the app's only login method now.
-  /// A phone with no existing account is silently signed up here too;
-  /// there's no separate register step.
-  static Future<void> sendOtp({required String phone}) async {
-    await ApiClient.post(ApiConfig.sendOtp, {'phone': phone});
+  /// Phone + OTP login/register (via Twilio). Pass [name] only from the
+  /// Register screen - its presence is what tells the backend this is a
+  /// registration, not a login (see PhoneAuthApiController::sendOtp()).
+  static Future<void> sendOtp({required String phone, String? name}) async {
+    await ApiClient.post(ApiConfig.sendOtp, {
+      'phone': phone,
+      if (name != null && name.isNotEmpty) 'name': name,
+    });
   }
 
   /// Returns the logged-in user plus whether this was their first-ever

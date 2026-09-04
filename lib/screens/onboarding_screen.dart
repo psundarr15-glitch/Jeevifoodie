@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../theme.dart';
 import '../l10n/app_localizations.dart';
-import 'auth/phone_login_screen.dart';
+import 'auth/login_screen.dart';
 
 class OnboardingScreen extends StatelessWidget {
   const OnboardingScreen({super.key});
@@ -11,7 +11,7 @@ class OnboardingScreen extends StatelessWidget {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool('seen_onboarding', true);
     if (!context.mounted) return;
-    Navigator.of(context).pushReplacement(MaterialPageRoute(builder: (_) => const PhoneLoginScreen()));
+    Navigator.of(context).pushReplacement(MaterialPageRoute(builder: (_) => const LoginScreen()));
   }
 
   @override

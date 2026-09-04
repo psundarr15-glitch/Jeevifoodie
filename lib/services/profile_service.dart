@@ -19,8 +19,14 @@ class ProfileService {
     );
   }
 
-  static Future<void> update({required String name, required String phone}) async {
-    await ApiClient.post(ApiConfig.profileUpdate, {'name': name, 'phone': phone});
+  static Future<void> update({required String name, String? phone}) async {
+    await ApiClient.post(ApiConfig.profileUpdate, {
+      'name': name,
+      // Only sent when actually changing it - re-sending the same
+      // phone back unnecessarily re-triggers the backend's phone
+      // uniqueness check against this same record.
+      if (phone != null) 'phone': phone,
+    });
   }
 
   static Future<void> changePassword({required String currentPassword, required String newPassword}) async {

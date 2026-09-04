@@ -1,10 +1,15 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
+import '../../config/api_config.dart';
 import '../../services/auth_service.dart';
-import '../../state/app_state.dart';
-import '../../widgets/root_shell.dart';
+import '../../theme.dart';
 import '../../l10n/app_localizations.dart';
+import 'otp_verify_screen.dart';
+import '../profile/static_page_screen.dart';
 
+/// Register only - a phone that's already registered (has a name on
+/// file) is rejected here (see PhoneAuthApiController::sendOtp()), so
+/// nobody can silently take over an existing account by "signing up"
+/// with the same number again.
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
   @override
@@ -14,33 +19,34 @@ class RegisterScreen extends StatefulWidget {
 class _RegisterScreenState extends State<RegisterScreen> {
   final _formKey = GlobalKey<FormState>();
   final _name = TextEditingController();
-  final _email = TextEditingController();
   final _phone = TextEditingController();
-  final _password = TextEditingController();
-  final _confirm = TextEditingController();
-  bool _obscure = true;
+  bool _agreedToTerms = true;
   bool _loading = false;
   String? _error;
 
-  Future<void> _submit() async {
+  @override
+  void dispose() {
+    _name.dispose();
+    _phone.dispose();
+    super.dispose();
+  }
+
+  Future<void> _register() async {
     if (!_formKey.currentState!.validate()) return;
+    final t = AppLocalizations.of(context)!;
+    if (!_agreedToTerms) {
+      setState(() => _error = t.pleaseAgreeToTerms);
+      return;
+    }
     setState(() {
       _loading = true;
       _error = null;
     });
+    final phone = _phone.text.trim();
     try {
-      final user = await AuthService.register(
-        name: _name.text.trim(),
-        email: _email.text.trim(),
-        phone: _phone.text.trim(),
-        password: _password.text,
-      );
+      await AuthService.sendOtp(phone: phone, name: _name.text.trim());
       if (!mounted) return;
-      context.read<AppState>().setLoggedIn(user);
-      Navigator.of(context).pushAndRemoveUntil(
-        MaterialPageRoute(builder: (_) => const RootShell()),
-        (route) => false,
-      );
+      Navigator.of(context).push(MaterialPageRoute(builder: (_) => OtpVerifyScreen(phone: phone)));
     } catch (e) {
       setState(() => _error = e.toString());
     } finally {
@@ -52,76 +58,88 @@ class _RegisterScreenState extends State<RegisterScreen> {
   Widget build(BuildContext context) {
     final t = AppLocalizations.of(context)!;
     return Scaffold(
+      appBar: AppBar(),
       body: SafeArea(
         child: Padding(
-          padding: const EdgeInsets.all(24),
+          padding: const EdgeInsets.symmetric(horizontal: 24),
           child: Form(
             key: _formKey,
             child: ListView(
               children: [
-                const SizedBox(height: 24),
-                Text(t.createAccount, style: Theme.of(context).textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.w900)),
-                const SizedBox(height: 8),
-                Text(t.signUpToStart, style: TextStyle(color: Colors.grey.shade600)),
-                const SizedBox(height: 28),
+                const SizedBox(height: 32),
+                Center(
+                  child: Image.asset('assets/icon/icon.png', height: 96, errorBuilder: (_, __, ___) => Icon(Icons.storefront_rounded, color: AppTheme.primary, size: 72)),
+                ),
+                const SizedBox(height: 32),
+                Text(t.registerTitle, style: const TextStyle(fontSize: 26, fontWeight: FontWeight.bold)),
+                const SizedBox(height: 20),
                 TextFormField(
                   controller: _name,
-                  decoration: InputDecoration(labelText: t.fullName, prefixIcon: const Icon(Icons.person_outline)),
-                  validator: (v) => (v == null || v.trim().length < 2) ? t.validatorEnterYourName : null,
+                  decoration: InputDecoration(labelText: '${t.fullName} *', prefixIcon: const Icon(Icons.person_outline)),
+                  validator: (v) => (v == null || v.trim().length < 2) ? t.validatorRequired : null,
                 ),
-                const SizedBox(height: 16),
-                TextFormField(
-                  controller: _email,
-                  keyboardType: TextInputType.emailAddress,
-                  decoration: InputDecoration(labelText: t.email, prefixIcon: const Icon(Icons.mail_outline)),
-                  validator: (v) => (v == null || !v.contains('@')) ? t.validatorValidEmail : null,
-                ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 14),
                 TextFormField(
                   controller: _phone,
                   keyboardType: TextInputType.phone,
-                  decoration: InputDecoration(labelText: t.phone, prefixIcon: const Icon(Icons.phone_outlined)),
-                  validator: (v) => (v == null || v.trim().length < 10) ? t.validatorValidPhone : null,
-                ),
-                const SizedBox(height: 16),
-                TextFormField(
-                  controller: _password,
-                  obscureText: _obscure,
+                  maxLength: 10,
                   decoration: InputDecoration(
-                    labelText: t.password,
-                    prefixIcon: const Icon(Icons.lock_outline),
-                    suffixIcon: IconButton(
-                      icon: Icon(_obscure ? Icons.visibility_outlined : Icons.visibility_off_outlined),
-                      onPressed: () => setState(() => _obscure = !_obscure),
+                    labelText: '${t.phoneLabel} *',
+                    counterText: '',
+                    prefixIcon: const Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 12),
+                      child: Text('🇮🇳 +91', style: TextStyle(fontSize: 15)),
                     ),
+                    prefixIconConstraints: const BoxConstraints(minWidth: 0),
                   ),
-                  validator: (v) => (v == null || v.length < 6) ? t.validatorMin6Chars : null,
+                  validator: (v) => (v == null || !RegExp(r'^[0-9]{10}$').hasMatch(v.trim())) ? t.enterValidMobileNumber : null,
                 ),
-                const SizedBox(height: 16),
-                TextFormField(
-                  controller: _confirm,
-                  obscureText: _obscure,
-                  decoration: InputDecoration(labelText: t.confirmPassword, prefixIcon: const Icon(Icons.lock_outline)),
-                  validator: (v) => (v != _password.text) ? t.validatorPasswordsNoMatch : null,
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    Checkbox(
+                      value: _agreedToTerms,
+                      onChanged: (v) => setState(() => _agreedToTerms = v ?? false),
+                    ),
+                    Expanded(
+                      child: Wrap(
+                        crossAxisAlignment: WrapCrossAlignment.center,
+                        children: [
+                          Text('${t.agreeWithThe} '),
+                          GestureDetector(
+                            onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const StaticPageScreen(url: ApiConfig.pageTerms))),
+                            child: Text(t.termsAndConditions, style: const TextStyle(color: AppTheme.primary, fontWeight: FontWeight.w600)),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                 ),
                 if (_error != null) ...[
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 10),
                   Text(_error!, style: const TextStyle(color: Colors.red)),
                 ],
-                const SizedBox(height: 24),
+                const SizedBox(height: 20),
                 ElevatedButton(
-                  onPressed: _loading ? null : _submit,
+                  onPressed: _loading ? null : _register,
                   child: _loading
                       ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                      : Text(t.signUp),
+                      : Text(t.registerTitle),
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 20),
                 Center(
-                  child: TextButton(
-                    onPressed: () => Navigator.of(context).pop(),
-                    child: Text(t.alreadyHaveAccountLogin),
+                  child: Wrap(
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    children: [
+                      Text('${t.alreadyHaveAccount} '),
+                      GestureDetector(
+                        onTap: () => Navigator.of(context).pop(),
+                        child: Text(t.signIn, style: const TextStyle(color: AppTheme.primary, fontWeight: FontWeight.w600)),
+                      ),
+                    ],
                   ),
                 ),
+                const SizedBox(height: 24),
               ],
             ),
           ),
