@@ -3,11 +3,10 @@ class ApiConfig {
   static const String baseUrl = 'https://food.tvkomalur.xyz/api';
 
   // Individual endpoints, matching app/Config/Routes.php on the backend.
-  static const String register = '$baseUrl/customer/register';
-  static const String login = '$baseUrl/customer/login';
+  // Login is phone + OTP only now (see PhoneAuthApiController) - the old
+  // email/password register/login/forgot-password/reset-password
+  // endpoints are no longer called from the app.
   static const String logout = '$baseUrl/customer/logout';
-  static const String forgotPassword = '$baseUrl/customer/forgot-password';
-  static const String resetPassword = '$baseUrl/customer/reset-password';
   static const String sendOtp = '$baseUrl/customer/auth/send-otp';
   static const String verifyOtp = '$baseUrl/customer/auth/verify-otp';
 
