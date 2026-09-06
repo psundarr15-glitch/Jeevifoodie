@@ -26,8 +26,10 @@ class OrderSummary {
 }
 
 class OrderTrackingInfo {
+  final int orderId;
   final String orderStatus;
   final int? etaMin;
+  final int? deliveryPartnerId;
   final String? partnerName;
   final String? partnerPhone;
   final double? lat;
@@ -36,12 +38,15 @@ class OrderTrackingInfo {
   final double? restaurantLng;
   final int? restaurantId;
   final String? restaurantName;
+  final bool reviewed;
   final List<Map<String, dynamic>> items;
   final List<Map<String, dynamic>> history;
 
   OrderTrackingInfo({
+    required this.orderId,
     required this.orderStatus,
     this.etaMin,
+    this.deliveryPartnerId,
     this.partnerName,
     this.partnerPhone,
     this.lat,
@@ -50,13 +55,16 @@ class OrderTrackingInfo {
     this.restaurantLng,
     this.restaurantId,
     this.restaurantName,
+    this.reviewed = false,
     this.items = const [],
     this.history = const [],
   });
 
   factory OrderTrackingInfo.fromJson(Map<String, dynamic> j) => OrderTrackingInfo(
+        orderId: int.tryParse((j['order'] as Map<String, dynamic>?)?['id']?.toString() ?? '') ?? 0,
         orderStatus: j['order_status']?.toString() ?? 'placed',
         etaMin: j['eta_min'] != null ? int.tryParse(j['eta_min'].toString()) : null,
+        deliveryPartnerId: j['delivery_partner_id'] != null ? int.tryParse(j['delivery_partner_id'].toString()) : null,
         partnerName: j['partner_name']?.toString(),
         partnerPhone: j['partner_phone']?.toString(),
         lat: j['lat'] != null ? double.tryParse(j['lat'].toString()) : null,
@@ -65,6 +73,7 @@ class OrderTrackingInfo {
         restaurantLng: j['restaurant_lng'] != null ? double.tryParse(j['restaurant_lng'].toString()) : null,
         restaurantId: j['restaurant_id'] != null ? int.tryParse(j['restaurant_id'].toString()) : null,
         restaurantName: j['restaurant_name']?.toString(),
+        reviewed: j['reviewed'] == true,
         items: (j['items'] as List? ?? []).cast<Map<String, dynamic>>(),
         history: (j['history'] as List? ?? []).cast<Map<String, dynamic>>(),
       );

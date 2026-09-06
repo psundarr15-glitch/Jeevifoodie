@@ -24,6 +24,7 @@ class ApiConfig {
 
   static const String myOrders = '$baseUrl/customer/orders';
   static String trackOrder(String orderCode) => '$baseUrl/customer/orders/track/$orderCode';
+  static const String reviewStore = '$baseUrl/customer/review/store';
 
   static const String profileView = '$baseUrl/customer/profile';
   static const String profileUpdate = '$baseUrl/customer/profile/update';

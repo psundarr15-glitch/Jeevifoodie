@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import '../../services/order_service.dart';
+import '../../services/review_service.dart';
 import '../../models/order.dart';
 import '../../theme.dart';
 import '../../l10n/app_localizations.dart';
@@ -73,6 +74,10 @@ class _OrderTrackScreenState extends State<OrderTrackScreen> {
           return ListView(
             padding: const EdgeInsets.all(16),
             children: [
+              if (info.orderStatus == 'delivered' && !info.reviewed) ...[
+                _RateOrderBanner(info: info, onRated: _load),
+                const SizedBox(height: 16),
+              ],
               if (info.etaMin != null)
                 Card(
                   color: Theme.of(context).colorScheme.primary.withOpacity(0.08),
@@ -298,6 +303,162 @@ class _StageRow extends StatelessWidget {
           child: Text(label, style: TextStyle(color: done ? Colors.black : Colors.grey, fontWeight: done ? FontWeight.w600 : FontWeight.normal)),
         ),
       ],
+    );
+  }
+}
+
+/// Prompt shown on a delivered, not-yet-reviewed order. Tapping it opens
+/// a bottom sheet to rate the restaurant (always) and the delivery
+/// partner (only if one was assigned to this order).
+class _RateOrderBanner extends StatelessWidget {
+  final OrderTrackingInfo info;
+  final VoidCallback onRated;
+  const _RateOrderBanner({required this.info, required this.onRated});
+
+  Future<void> _openSheet(BuildContext context) async {
+    final rated = await showModalBottomSheet<bool>(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (context) => _RateOrderSheet(info: info),
+    );
+    if (rated == true) onRated();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context)!;
+    return Card(
+      color: AppTheme.primary.withOpacity(0.08),
+      child: ListTile(
+        leading: const Icon(Icons.star_outline, color: AppTheme.primary),
+        title: Text(t.rateYourOrder, style: const TextStyle(fontWeight: FontWeight.bold)),
+        subtitle: Text(t.rateYourOrderSubtitle),
+        trailing: const Icon(Icons.chevron_right),
+        onTap: () => _openSheet(context),
+      ),
+    );
+  }
+}
+
+class _RateOrderSheet extends StatefulWidget {
+  final OrderTrackingInfo info;
+  const _RateOrderSheet({required this.info});
+  @override
+  State<_RateOrderSheet> createState() => _RateOrderSheetState();
+}
+
+class _RateOrderSheetState extends State<_RateOrderSheet> {
+  int _restaurantRating = 0;
+  int _partnerRating = 0;
+  final _comment = TextEditingController();
+  bool _saving = false;
+  String? _error;
+
+  @override
+  void dispose() {
+    _comment.dispose();
+    super.dispose();
+  }
+
+  Future<void> _submit() async {
+    final t = AppLocalizations.of(context)!;
+    if (_restaurantRating == 0) {
+      setState(() => _error = t.pleaseRateRestaurant);
+      return;
+    }
+    setState(() {
+      _saving = true;
+      _error = null;
+    });
+    try {
+      await ReviewService.submit(
+        orderId: widget.info.orderId,
+        rating: _restaurantRating,
+        partnerRating: widget.info.deliveryPartnerId != null && _partnerRating > 0 ? _partnerRating : null,
+        comment: _comment.text,
+      );
+      if (mounted) Navigator.of(context).pop(true);
+    } catch (e) {
+      setState(() => _error = e.toString());
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context)!;
+    return Padding(
+      padding: EdgeInsets.fromLTRB(20, 16, 20, MediaQuery.of(context).viewInsets.bottom + 20),
+      child: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Center(
+              child: Container(
+                width: 40,
+                height: 4,
+                margin: const EdgeInsets.only(bottom: 16),
+                decoration: BoxDecoration(color: Colors.grey.shade300, borderRadius: BorderRadius.circular(2)),
+              ),
+            ),
+            Text(t.rateYourOrder, style: const TextStyle(fontSize: 19, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 20),
+            Text(widget.info.restaurantName ?? t.restaurantLabel, style: const TextStyle(fontWeight: FontWeight.w600)),
+            const SizedBox(height: 8),
+            _StarPicker(value: _restaurantRating, onChanged: (v) => setState(() => _restaurantRating = v)),
+            if (widget.info.deliveryPartnerId != null) ...[
+              const SizedBox(height: 20),
+              Text(widget.info.partnerName ?? t.deliveryPartnerLabel, style: const TextStyle(fontWeight: FontWeight.w600)),
+              const SizedBox(height: 8),
+              _StarPicker(value: _partnerRating, onChanged: (v) => setState(() => _partnerRating = v)),
+            ],
+            const SizedBox(height: 20),
+            TextField(
+              controller: _comment,
+              maxLines: 3,
+              decoration: InputDecoration(hintText: t.addACommentOptional, border: const OutlineInputBorder()),
+            ),
+            if (_error != null) ...[
+              const SizedBox(height: 12),
+              Text(_error!, style: const TextStyle(color: Colors.red)),
+            ],
+            const SizedBox(height: 20),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: _saving ? null : _submit,
+                child: _saving
+                    ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                    : Text(t.submitRating),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _StarPicker extends StatelessWidget {
+  final int value;
+  final ValueChanged<int> onChanged;
+  const _StarPicker({required this.value, required this.onChanged});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: List.generate(5, (i) {
+        final filled = i < value;
+        return IconButton(
+          padding: EdgeInsets.zero,
+          constraints: const BoxConstraints(),
+          onPressed: () => onChanged(i + 1),
+          icon: Icon(filled ? Icons.star : Icons.star_border, color: AppTheme.gold, size: 32),
+        );
+      }),
     );
   }
 }

@@ -14,6 +14,7 @@ class Restaurant {
   final bool isOpen;
   final int likeCount;
   final bool likedByMe;
+  final double? distanceKm;
 
   Restaurant({
     required this.id,
@@ -31,6 +32,7 @@ class Restaurant {
     this.isOpen = true,
     this.likeCount = 0,
     this.likedByMe = false,
+    this.distanceKm,
   });
 
   factory Restaurant.fromJson(Map<String, dynamic> j) => Restaurant(
@@ -49,6 +51,7 @@ class Restaurant {
         isOpen: j['is_open'] == true || j['is_open'].toString() == '1',
         likeCount: int.tryParse(j['like_count']?.toString() ?? '') ?? 0,
         likedByMe: j['liked_by_me'] == true || j['liked_by_me'].toString() == '1',
+        distanceKm: j['distance_km'] != null ? double.tryParse(j['distance_km'].toString()) : null,
       );
 
   Restaurant copyWith({bool? likedByMe, int? likeCount}) => Restaurant(
@@ -67,5 +70,6 @@ class Restaurant {
         isOpen: isOpen,
         likeCount: likeCount ?? this.likeCount,
         likedByMe: likedByMe ?? this.likedByMe,
+        distanceKm: distanceKm,
       );
 }

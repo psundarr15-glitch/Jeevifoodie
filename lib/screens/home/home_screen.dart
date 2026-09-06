@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import '../../services/customer_service.dart';
+import '../../models/menu_item.dart';
 import '../../theme.dart';
 import '../restaurant/restaurant_menu_screen.dart';
 import '../restaurant/restaurant_list_screen.dart';
@@ -62,21 +63,49 @@ class _HomeScreenState extends State<HomeScreen> {
                         if (data.coupons.isNotEmpty) const SizedBox(height: 24),
                         if (data.categories.isNotEmpty) _CategoryRow(categories: data.categories),
                         const SizedBox(height: 24),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Text(AppLocalizations.of(context)!.popularRestaurants, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                            GestureDetector(
-                              onTap: _browseAll,
-                              child: Text(AppLocalizations.of(context)!.viewAll, style: const TextStyle(color: AppTheme.primary, fontWeight: FontWeight.w600)),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 12),
+                        if (data.nearbyStores.isNotEmpty) ...[
+                          Text(AppLocalizations.of(context)!.nearbyStores, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                          const SizedBox(height: 12),
+                        ],
                       ],
                     ),
                   ),
                 ),
+                if (data.nearbyStores.isNotEmpty) ...[
+                  SizedBox(
+                    height: 230,
+                    child: ListView.separated(
+                      scrollDirection: Axis.horizontal,
+                      padding: const EdgeInsets.symmetric(horizontal: 20),
+                      itemCount: data.nearbyStores.length,
+                      separatorBuilder: (_, __) => const SizedBox(width: 14),
+                      itemBuilder: (_, i) {
+                        final r = data.nearbyStores[i];
+                        return _HomeRestaurantCard(
+                          restaurant: r,
+                          onTap: () => Navigator.of(context).push(
+                            MaterialPageRoute(builder: (_) => RestaurantMenuScreen(restaurantId: r.id)),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                ],
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(AppLocalizations.of(context)!.popularRestaurants, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                      GestureDetector(
+                        onTap: _browseAll,
+                        child: Text(AppLocalizations.of(context)!.viewAll, style: const TextStyle(color: AppTheme.primary, fontWeight: FontWeight.w600)),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 12),
                 SizedBox(
                   height: 230,
                   child: ListView.separated(
@@ -96,6 +125,32 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                 ),
                 const SizedBox(height: 24),
+                if (data.popularItems.isNotEmpty) ...[
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    child: Text(AppLocalizations.of(context)!.popularItems, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                  ),
+                  const SizedBox(height: 12),
+                  SizedBox(
+                    height: 200,
+                    child: ListView.separated(
+                      scrollDirection: Axis.horizontal,
+                      padding: const EdgeInsets.symmetric(horizontal: 20),
+                      itemCount: data.popularItems.length,
+                      separatorBuilder: (_, __) => const SizedBox(width: 14),
+                      itemBuilder: (_, i) {
+                        final item = data.popularItems[i];
+                        return _PopularItemCard(
+                          item: item,
+                          onTap: () => Navigator.of(context).push(
+                            MaterialPageRoute(builder: (_) => RestaurantMenuScreen(restaurantId: item.restaurantId)),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                ],
                 if (data.coupons.isNotEmpty) ...[
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -311,29 +366,32 @@ class _CategoryRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final shown = categories.take(4).toList();
+    final shown = categories.take(8).toList();
     return SizedBox(
-      height: 88,
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          for (int i = 0; i < shown.length; i++)
-            _CategoryItem(
-              label: shown[i].displayName(context),
-              icon: shown[i].icon,
-              fallbackIcon: _fallbackIcons[i % _fallbackIcons.length],
-              onTap: () => Navigator.of(context).push(
-                MaterialPageRoute(builder: (_) => RestaurantListScreen(initialQuery: shown[i].name)),
-              ),
+      height: 96,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        itemCount: shown.length + 1, // +1 for the trailing "More" tile
+        separatorBuilder: (_, __) => const SizedBox(width: 18),
+        itemBuilder: (context, i) {
+          if (i == shown.length) {
+            return _CategoryItem(
+              label: AppLocalizations.of(context)!.more,
+              icon: null,
+              fallbackIcon: Icons.grid_view_rounded,
+              isMore: true,
+              onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const RestaurantListScreen())),
+            );
+          }
+          return _CategoryItem(
+            label: shown[i].displayName(context),
+            icon: shown[i].icon,
+            fallbackIcon: _fallbackIcons[i % _fallbackIcons.length],
+            onTap: () => Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => RestaurantListScreen(initialQuery: shown[i].name)),
             ),
-          _CategoryItem(
-            label: AppLocalizations.of(context)!.more,
-            icon: null,
-            fallbackIcon: Icons.grid_view_rounded,
-            isMore: true,
-            onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const RestaurantListScreen())),
-          ),
-        ],
+          );
+        },
       ),
     );
   }
@@ -419,7 +477,12 @@ class _HomeRestaurantCard extends StatelessWidget {
                   child: Container(
                     padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
                     decoration: BoxDecoration(color: Colors.black.withOpacity(0.65), borderRadius: BorderRadius.circular(6)),
-                    child: Text(AppLocalizations.of(context)!.prepTimeRange(restaurant.prepTimeMin.toString(), restaurant.prepTimeMax.toString()), style: const TextStyle(color: Colors.white, fontSize: 11)),
+                    child: Text(
+                      restaurant.distanceKm != null
+                          ? '${restaurant.distanceKm.toStringAsFixed(1)} km'
+                          : AppLocalizations.of(context)!.prepTimeRange(restaurant.prepTimeMin.toString(), restaurant.prepTimeMax.toString()),
+                      style: const TextStyle(color: Colors.white, fontSize: 11),
+                    ),
                   ),
                 ),
               ],
@@ -437,6 +500,86 @@ class _HomeRestaurantCard extends StatelessWidget {
               ),
               style: TextStyle(color: AppTheme.success, fontSize: 12, fontWeight: FontWeight.w600),
             ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _PopularItemCard extends StatelessWidget {
+  final MenuItem item;
+  final VoidCallback onTap;
+  const _PopularItemCard({required this.item, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    const fallbackImage = 'https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=400&h=300&fit=crop';
+
+    return GestureDetector(
+      onTap: onTap,
+      child: SizedBox(
+        width: 150,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Stack(
+              children: [
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(14),
+                  child: Image.network(
+                    item.image?.isNotEmpty == true ? item.image! : fallbackImage,
+                    height: 110,
+                    width: 150,
+                    fit: BoxFit.cover,
+                    errorBuilder: (_, __, ___) => Image.network(fallbackImage, height: 110, width: 150, fit: BoxFit.cover),
+                  ),
+                ),
+                Positioned(
+                  top: 6,
+                  left: 6,
+                  child: Container(
+                    width: 14,
+                    height: 14,
+                    decoration: BoxDecoration(
+                      border: Border.all(color: item.isVeg ? Colors.green.shade700 : Colors.red.shade700, width: 1.4),
+                      borderRadius: BorderRadius.circular(3),
+                      color: Colors.white,
+                    ),
+                    child: Center(
+                      child: Container(
+                        width: 6,
+                        height: 6,
+                        decoration: BoxDecoration(shape: BoxShape.circle, color: item.isVeg ? Colors.green.shade700 : Colors.red.shade700),
+                      ),
+                    ),
+                  ),
+                ),
+                if (item.rating > 0)
+                  Positioned(
+                    top: 6,
+                    right: 6,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      decoration: BoxDecoration(color: Colors.green.shade600, borderRadius: BorderRadius.circular(6)),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.star, size: 10, color: Colors.white),
+                          const SizedBox(width: 2),
+                          Text(item.rating.toStringAsFixed(1), style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)),
+                        ],
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+            const SizedBox(height: 6),
+            Text(item.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13.5)),
+            if (item.restaurantName != null)
+              Text(item.restaurantName!, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(color: Colors.grey.shade600, fontSize: 11.5)),
+            const SizedBox(height: 2),
+            Text('₹${item.price.toStringAsFixed(0)}', style: const TextStyle(color: AppTheme.success, fontSize: 12.5, fontWeight: FontWeight.w600)),
           ],
         ),
       ),

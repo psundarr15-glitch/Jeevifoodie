@@ -10,6 +10,7 @@ class MenuItem {
   final double rating;
   final int ratingCount;
   final bool isAvailable;
+  final String? restaurantName;
 
   MenuItem({
     required this.id,
@@ -23,6 +24,7 @@ class MenuItem {
     this.rating = 0,
     this.ratingCount = 0,
     this.isAvailable = true,
+    this.restaurantName,
   });
 
   factory MenuItem.fromJson(Map<String, dynamic> j) => MenuItem(
@@ -37,5 +39,6 @@ class MenuItem {
         rating: double.tryParse(j['rating']?.toString() ?? '') ?? 0,
         ratingCount: int.tryParse(j['rating_count']?.toString() ?? '') ?? 0,
         isAvailable: j['is_available'] == null ? true : (j['is_available'].toString() == '1' || j['is_available'] == true),
+        restaurantName: j['restaurant_name']?.toString(),
       );
 }
