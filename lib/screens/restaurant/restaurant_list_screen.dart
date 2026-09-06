@@ -83,8 +83,14 @@ class _RestaurantListScreenState extends State<RestaurantListScreen> {
                     ? Center(child: Text(t.errorLabel(_error!)))
                     : _restaurants.isEmpty
                         ? Center(child: Text(t.noRestaurantsFound))
-                        : ListView.builder(
-                            padding: const EdgeInsets.only(top: 4, bottom: 16),
+                        : GridView.builder(
+                            padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
+                            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                              crossAxisCount: 2,
+                              mainAxisSpacing: 14,
+                              crossAxisSpacing: 14,
+                              childAspectRatio: 0.66,
+                            ),
                             itemCount: _restaurants.length,
                             itemBuilder: (context, i) {
                               final r = _restaurants[i];
