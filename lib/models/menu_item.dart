@@ -11,6 +11,9 @@ class MenuItem {
   final int ratingCount;
   final bool isAvailable;
   final String? restaurantName;
+  final bool isOpen;
+  final int likeCount;
+  final bool likedByMe;
 
   MenuItem({
     required this.id,
@@ -25,6 +28,9 @@ class MenuItem {
     this.ratingCount = 0,
     this.isAvailable = true,
     this.restaurantName,
+    this.isOpen = true,
+    this.likeCount = 0,
+    this.likedByMe = false,
   });
 
   factory MenuItem.fromJson(Map<String, dynamic> j) => MenuItem(
@@ -40,5 +46,8 @@ class MenuItem {
         ratingCount: int.tryParse(j['rating_count']?.toString() ?? '') ?? 0,
         isAvailable: j['is_available'] == null ? true : (j['is_available'].toString() == '1' || j['is_available'] == true),
         restaurantName: j['restaurant_name']?.toString(),
+        isOpen: j['is_open'] == null ? true : (j['is_open'] == true || j['is_open'].toString() == '1'),
+        likeCount: int.tryParse(j['like_count']?.toString() ?? '') ?? 0,
+        likedByMe: j['liked_by_me'] == true || j['liked_by_me'].toString() == '1',
       );
 }

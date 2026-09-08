@@ -3,7 +3,7 @@ import 'package:provider/provider.dart';
 import '../state/app_state.dart';
 import '../l10n/app_localizations.dart';
 import '../screens/home/home_screen.dart';
-import '../screens/restaurant/restaurant_list_screen.dart';
+import '../screens/search/search_screen.dart';
 import '../screens/cart/cart_screen.dart';
 import '../screens/orders/orders_screen.dart';
 import '../screens/profile/profile_screen.dart';
@@ -22,7 +22,7 @@ class _RootShellState extends State<RootShell> {
 
   static final _tabs = [
     const HomeScreen(),
-    const RestaurantListScreen(),
+    const SearchScreen(),
     const OrdersScreen(),
     const ChatsListScreen(),
     const CartScreen(),

@@ -14,6 +14,8 @@ class ApiConfig {
   static const String restaurants = '$baseUrl/customer/restaurants';
   static String restaurantMenu(int id) => '$baseUrl/customer/restaurants/$id';
   static String toggleLike(int id) => '$baseUrl/customer/restaurants/$id/like';
+  static String toggleItemLike(int id) => '$baseUrl/customer/menu-items/$id/like';
+  static String search(String q) => '$baseUrl/customer/search?q=${Uri.encodeQueryComponent(q)}';
 
   static const String cartView = '$baseUrl/customer/cart';
   static const String cartAdd = '$baseUrl/customer/cart/add';

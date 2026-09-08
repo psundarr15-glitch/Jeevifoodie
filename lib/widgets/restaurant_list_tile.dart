@@ -71,7 +71,7 @@ class _RestaurantListTileState extends State<RestaurantListTile> {
                       onTap: _toggleLike,
                       child: Icon(
                         _liked ? Icons.favorite : Icons.favorite_border,
-                        color: _liked ? AppTheme.primary : Colors.white,
+                        color: _liked ? Colors.green.shade600 : Colors.white,
                         size: 26,
                         shadows: const [Shadow(color: Colors.black38, blurRadius: 4)],
                       ),

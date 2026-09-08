@@ -427,17 +427,39 @@ class _CategoryItem extends StatelessWidget {
   }
 }
 
-class _HomeRestaurantCard extends StatelessWidget {
+class _HomeRestaurantCard extends StatefulWidget {
   final dynamic restaurant;
   final VoidCallback onTap;
   const _HomeRestaurantCard({required this.restaurant, required this.onTap});
 
   @override
+  State<_HomeRestaurantCard> createState() => _HomeRestaurantCardState();
+}
+
+class _HomeRestaurantCardState extends State<_HomeRestaurantCard> {
+  late bool _liked = widget.restaurant.likedByMe;
+  bool _toggling = false;
+
+  Future<void> _toggleLike() async {
+    if (_toggling) return;
+    setState(() { _toggling = true; _liked = !_liked; });
+    try {
+      final (liked, _) = await CustomerService.toggleLike(widget.restaurant.id);
+      if (mounted) setState(() => _liked = liked);
+    } catch (_) {
+      if (mounted) setState(() => _liked = !_liked);
+    } finally {
+      if (mounted) setState(() => _toggling = false);
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final restaurant = widget.restaurant;
     const fallbackImage = 'https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=400&h=300&fit=crop';
 
     return GestureDetector(
-      onTap: onTap,
+      onTap: widget.onTap,
       child: SizedBox(
         width: 190,
         child: Column(
@@ -453,6 +475,19 @@ class _HomeRestaurantCard extends StatelessWidget {
                     width: 190,
                     fit: BoxFit.cover,
                     errorBuilder: (_, __, ___) => Image.network(fallbackImage, height: 120, width: 190, fit: BoxFit.cover),
+                  ),
+                ),
+                Positioned(
+                  top: 8,
+                  left: 8,
+                  child: GestureDetector(
+                    onTap: _toggleLike,
+                    child: Icon(
+                      _liked ? Icons.favorite : Icons.favorite_border,
+                      color: _liked ? Colors.green.shade600 : Colors.white,
+                      size: 22,
+                      shadows: const [Shadow(color: Colors.black38, blurRadius: 4)],
+                    ),
                   ),
                 ),
                 Positioned(
