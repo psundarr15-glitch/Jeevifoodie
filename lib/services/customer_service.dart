@@ -43,7 +43,7 @@ class CustomerService {
       }
       return await Geolocator.getCurrentPosition(
         locationSettings: const LocationSettings(accuracy: LocationAccuracy.low),
-      );
+      ).timeout(const Duration(seconds: 5));
     } catch (_) {
       return null;
     }
