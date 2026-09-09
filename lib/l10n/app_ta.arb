@@ -98,6 +98,7 @@
   "searchForRestaurantOrFood": "உணவகம் அல்லது உணவைத் தேடுங்கள்",
   "popularRestaurants": "பிரபலமான உணவகங்கள்",
   "nearbyStores": "அருகிலுள்ள கடைகள்",
+  "nearbyStoresSubtitle": "சுவையான உணவு, உங்களுக்கு அருகில்",
   "rateYourOrder": "உங்கள் ஆர்டரை மதிப்பிடுங்கள்",
   "rateYourOrderSubtitle": "ரெஸ்டாரன்ட் மற்றும் டெலிவரி எப்படி இருந்தது என்று சொல்லுங்கள்",
   "pleaseRateRestaurant": "ரெஸ்டாரன்ட்-க்கு ஒரு ஸ்டார் ரேட்டிங் கொடுக்கவும்.",
@@ -112,6 +113,9 @@
   "useCode": "{code} குறியீட்டைப் பயன்படுத்தவும்",
   "@useCode": {"placeholders": {"code": {"type": "String"}}},
   "offLabel": "{label} தள்ளுபடி",
+  "offSuffix": "தள்ளுபடி",
+  "limitedTimeOffer": "குறுகிய கால சலுகை",
+  "goodFoodGoodMood": "நல்ல உணவு\nநல்ல மனநிலை",
   "@offLabel": {"placeholders": {"label": {"type": "String"}}},
   "codeLabel": "குறியீடு: {code}",
   "@codeLabel": {"placeholders": {"code": {"type": "String"}}},
@@ -354,5 +358,7 @@
   "@ratingCountParen": {"placeholders": {"count": {"type": "String"}}},
 
   "prepTimeAndCost": "{min}-{max} நிமிடங்கள்  •  இருவருக்கு ₹{cost}",
+  "forTwo": "இருவருக்கு ₹{cost}",
+  "@forTwo": {"placeholders": {"cost": {"type": "String"}}},
   "@prepTimeAndCost": {"placeholders": {"min": {"type": "String"}, "max": {"type": "String"}, "cost": {"type": "String"}}}
 }

@@ -98,6 +98,7 @@
   "searchForRestaurantOrFood": "Search for restaurant or food",
   "popularRestaurants": "Popular Restaurants",
   "nearbyStores": "Nearby Stores",
+  "nearbyStoresSubtitle": "Delicious food, just around you",
   "rateYourOrder": "Rate your order",
   "rateYourOrderSubtitle": "Tell us how the restaurant and delivery went",
   "pleaseRateRestaurant": "Please give the restaurant a star rating.",
@@ -112,6 +113,9 @@
   "useCode": "Use code {code}",
   "@useCode": {"placeholders": {"code": {"type": "String"}}},
   "offLabel": "{label} OFF",
+  "offSuffix": "OFF",
+  "limitedTimeOffer": "Limited Time Offer",
+  "goodFoodGoodMood": "Good Food\nGood Mood",
   "@offLabel": {"placeholders": {"label": {"type": "String"}}},
   "codeLabel": "Code: {code}",
   "@codeLabel": {"placeholders": {"code": {"type": "String"}}},
@@ -354,5 +358,7 @@
   "@ratingCountParen": {"placeholders": {"count": {"type": "String"}}},
 
   "prepTimeAndCost": "{min}-{max} mins  •  ₹{cost} for two",
+  "forTwo": "₹{cost} for two",
+  "@forTwo": {"placeholders": {"cost": {"type": "String"}}},
   "@prepTimeAndCost": {"placeholders": {"min": {"type": "String"}, "max": {"type": "String"}, "cost": {"type": "String"}}}
 }

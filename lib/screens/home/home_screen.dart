@@ -5,6 +5,7 @@ import '../../models/menu_item.dart';
 import '../../theme.dart';
 import '../restaurant/restaurant_menu_screen.dart';
 import '../restaurant/restaurant_list_screen.dart';
+import '../search/search_screen.dart';
 import '../../widgets/notification_bell.dart';
 import '../../l10n/app_localizations.dart';
 
@@ -29,6 +30,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _browseAll() => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const RestaurantListScreen()));
+  void _openSearch() => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const SearchScreen()));
 
   @override
   Widget build(BuildContext context) {
@@ -51,7 +53,7 @@ class _HomeScreenState extends State<HomeScreen> {
             return ListView(
               padding: EdgeInsets.zero,
               children: [
-                _GreenHeader(onSearchTap: _browseAll),
+                _GreenHeader(onSearchTap: _openSearch),
                 Transform.translate(
                   offset: const Offset(0, -26),
                   child: Padding(
@@ -64,7 +66,33 @@ class _HomeScreenState extends State<HomeScreen> {
                         if (data.categories.isNotEmpty) _CategoryRow(categories: data.categories),
                         const SizedBox(height: 24),
                         if (data.nearbyStores.isNotEmpty) ...[
-                          Text(AppLocalizations.of(context)!.nearbyStores, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                          Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Expanded(
+                                child: Row(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    const Padding(
+                                      padding: EdgeInsets.only(top: 2),
+                                      child: Icon(Icons.location_on, color: AppTheme.primary, size: 20),
+                                    ),
+                                    const SizedBox(width: 6),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Text(AppLocalizations.of(context)!.nearbyStores, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                                          Text(AppLocalizations.of(context)!.nearbyStoresSubtitle, style: TextStyle(color: Colors.grey.shade600, fontSize: 12.5)),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              _ViewAllPill(onTap: _browseAll),
+                            ],
+                          ),
                           const SizedBox(height: 12),
                         ],
                       ],
@@ -73,7 +101,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
                 if (data.nearbyStores.isNotEmpty) ...[
                   SizedBox(
-                    height: 230,
+                    height: 250,
                     child: ListView.separated(
                       scrollDirection: Axis.horizontal,
                       padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -98,16 +126,13 @@ class _HomeScreenState extends State<HomeScreen> {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(AppLocalizations.of(context)!.popularRestaurants, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                      GestureDetector(
-                        onTap: _browseAll,
-                        child: Text(AppLocalizations.of(context)!.viewAll, style: const TextStyle(color: AppTheme.primary, fontWeight: FontWeight.w600)),
-                      ),
+                      _ViewAllPill(onTap: _browseAll),
                     ],
                   ),
                 ),
                 const SizedBox(height: 12),
                 SizedBox(
-                  height: 230,
+                  height: 250,
                   child: ListView.separated(
                     scrollDirection: Axis.horizontal,
                     padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -203,7 +228,13 @@ class _GreenHeader extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(AppLocalizations.of(context)!.deliverTo, style: const TextStyle(color: Colors.white70, fontSize: 13)),
+                      Row(
+                        children: [
+                          const Icon(Icons.location_on, color: Colors.white70, size: 15),
+                          const SizedBox(width: 4),
+                          Text(AppLocalizations.of(context)!.deliverTo, style: const TextStyle(color: Colors.white70, fontSize: 13)),
+                        ],
+                      ),
                       Row(
                         children: [
                           Text(AppLocalizations.of(context)!.home, style: const TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.w800)),
@@ -230,7 +261,10 @@ class _GreenHeader extends StatelessWidget {
                   children: [
                     Icon(Icons.search, color: Colors.grey.shade500),
                     const SizedBox(width: 10),
-                    Text(AppLocalizations.of(context)!.searchForRestaurantOrFood, style: TextStyle(color: Colors.grey.shade500)),
+                    Expanded(
+                      child: Text(AppLocalizations.of(context)!.searchForRestaurantOrFood, style: TextStyle(color: Colors.grey.shade500)),
+                    ),
+                    Icon(Icons.tune, color: Colors.grey.shade400, size: 20),
                   ],
                 ),
               ),
@@ -293,7 +327,7 @@ class _BannerCarouselState extends State<_BannerCarousel> {
                 borderRadius: BorderRadius.circular(18),
                 child: Container(
                   decoration: const BoxDecoration(
-                    gradient: LinearGradient(colors: [AppTheme.primary, AppTheme.primaryDark], begin: Alignment.topLeft, end: Alignment.bottomRight),
+                    gradient: LinearGradient(colors: [Color(0xFF2A0A08), AppTheme.primaryDark], begin: Alignment.topLeft, end: Alignment.bottomRight),
                   ),
                   child: Stack(
                     children: [
@@ -306,22 +340,58 @@ class _BannerCarouselState extends State<_BannerCarousel> {
                           child: Image.network(foodImage, width: 190, fit: BoxFit.cover),
                         ),
                       ),
+                      Positioned(
+                        top: 16,
+                        right: 20,
+                        child: Text(
+                          AppLocalizations.of(context)!.goodFoodGoodMood,
+                          textAlign: TextAlign.right,
+                          style: const TextStyle(color: Colors.white70, fontSize: 11.5, fontStyle: FontStyle.italic, height: 1.3),
+                        ),
+                      ),
                       Padding(
                         padding: const EdgeInsets.all(24),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            Text(AppLocalizations.of(context)!.offLabel(label), style: const TextStyle(color: Colors.white, fontSize: 32, fontWeight: FontWeight.w900)),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                              decoration: BoxDecoration(color: AppTheme.primary, borderRadius: BorderRadius.circular(20)),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const Icon(Icons.sell, color: Colors.white, size: 12),
+                                  const SizedBox(width: 4),
+                                  Text(AppLocalizations.of(context)!.limitedTimeOffer, style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w600)),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(height: 10),
+                            RichText(
+                              text: TextSpan(
+                                children: [
+                                  TextSpan(text: '$label ', style: const TextStyle(color: AppTheme.gold, fontSize: 30, fontWeight: FontWeight.w900)),
+                                  TextSpan(text: AppLocalizations.of(context)!.offSuffix, style: const TextStyle(color: Colors.white, fontSize: 30, fontWeight: FontWeight.w900)),
+                                ],
+                              ),
+                            ),
                             const SizedBox(height: 4),
                             Text(AppLocalizations.of(context)!.useCode(c['code'].toString()), style: const TextStyle(color: Colors.white70, fontSize: 14)),
                             const SizedBox(height: 18),
                             GestureDetector(
                               onTap: widget.onOrderNow,
                               child: Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-                                decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(8)),
-                                child: Text(AppLocalizations.of(context)!.orderNow, style: const TextStyle(color: AppTheme.primaryDark, fontWeight: FontWeight.bold, fontSize: 12)),
+                                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 11),
+                                decoration: BoxDecoration(color: AppTheme.gold, borderRadius: BorderRadius.circular(8)),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Text(AppLocalizations.of(context)!.orderNow, style: const TextStyle(color: AppTheme.primaryDark, fontWeight: FontWeight.bold, fontSize: 12)),
+                                    const SizedBox(width: 6),
+                                    const Icon(Icons.arrow_forward, color: AppTheme.primaryDark, size: 14),
+                                  ],
+                                ),
                               ),
                             ),
                           ],
@@ -368,7 +438,7 @@ class _CategoryRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final shown = categories.take(8).toList();
     return SizedBox(
-      height: 96,
+      height: 108,
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
         itemCount: shown.length + 1, // +1 for the trailing "More" tile
@@ -405,22 +475,35 @@ class _CategoryItem extends StatelessWidget {
   final VoidCallback onTap;
   const _CategoryItem({required this.label, required this.icon, required this.fallbackIcon, required this.onTap, this.isMore = false});
 
+  static const _accentColors = [AppTheme.primary, Color(0xFF2E7D32), Color(0xFFF7B500), AppTheme.primary, Color(0xFF2E7D32)];
+
   @override
   Widget build(BuildContext context) {
+    // Cheap stable "random" accent so the same category always gets the
+    // same ring/underline color across rebuilds, without needing the
+    // list index threaded all the way down here.
+    final accent = isMore ? AppTheme.primary : _accentColors[label.hashCode.abs() % _accentColors.length];
+
     return GestureDetector(
       onTap: onTap,
       child: Column(
         children: [
-          CircleAvatar(
-            radius: 28,
-            backgroundColor: isMore ? AppTheme.primary : AppTheme.surface(context),
-            backgroundImage: icon != null ? NetworkImage(icon!) : null,
-            child: icon == null
-                ? Icon(fallbackIcon, color: isMore ? Colors.white : AppTheme.primary, size: 24)
-                : null,
+          Container(
+            padding: const EdgeInsets.all(3),
+            decoration: BoxDecoration(shape: BoxShape.circle, border: Border.all(color: accent, width: 2)),
+            child: CircleAvatar(
+              radius: 26,
+              backgroundColor: isMore ? AppTheme.primary : AppTheme.surface(context),
+              backgroundImage: icon != null ? NetworkImage(icon!) : null,
+              child: icon == null
+                  ? Icon(fallbackIcon, color: isMore ? Colors.white : accent, size: 22)
+                  : null,
+            ),
           ),
           const SizedBox(height: 8),
           Text(label, style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600)),
+          const SizedBox(height: 3),
+          Container(width: 20, height: 3, decoration: BoxDecoration(color: accent, borderRadius: BorderRadius.circular(2))),
         ],
       ),
     );
@@ -526,15 +609,51 @@ class _HomeRestaurantCardState extends State<_HomeRestaurantCard> {
             Text(restaurant.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
             const SizedBox(height: 2),
             Text(restaurant.cuisine ?? '', maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(color: Colors.grey.shade600, fontSize: 12.5)),
-            const SizedBox(height: 2),
-            Text(
-              AppLocalizations.of(context)!.prepTimeAndCost(
-                restaurant.prepTimeMin.toString(),
-                restaurant.prepTimeMax.toString(),
-                restaurant.costForTwo.toString(),
-              ),
-              style: TextStyle(color: AppTheme.success, fontSize: 12, fontWeight: FontWeight.w600),
+            const SizedBox(height: 4),
+            Row(
+              children: [
+                Icon(Icons.access_time, size: 13, color: Colors.grey.shade500),
+                const SizedBox(width: 3),
+                Text(
+                  AppLocalizations.of(context)!.prepTimeRange(restaurant.prepTimeMin.toString(), restaurant.prepTimeMax.toString()),
+                  style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600),
+                ),
+                Text('  |  ', style: TextStyle(color: Colors.grey.shade400, fontSize: 11)),
+                Icon(Icons.sell_outlined, size: 13, color: Colors.grey.shade500),
+                const SizedBox(width: 3),
+                Flexible(
+                  child: Text(
+                    AppLocalizations.of(context)!.forTwo(restaurant.costForTwo.toString()),
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600, color: AppTheme.primary),
+                  ),
+                ),
+              ],
             ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ViewAllPill extends StatelessWidget {
+  final VoidCallback onTap;
+  const _ViewAllPill({required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+        decoration: BoxDecoration(color: AppTheme.primary.withOpacity(0.1), borderRadius: BorderRadius.circular(20)),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(AppLocalizations.of(context)!.viewAll, style: const TextStyle(color: AppTheme.primary, fontWeight: FontWeight.w600, fontSize: 13)),
+            const SizedBox(width: 3),
+            const Icon(Icons.arrow_forward_ios, color: AppTheme.primary, size: 11),
           ],
         ),
       ),
