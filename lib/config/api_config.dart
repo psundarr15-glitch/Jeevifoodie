@@ -23,6 +23,8 @@ class ApiConfig {
 
   static const String applyCoupon = '$baseUrl/customer/checkout/apply-coupon';
   static const String placeOrder = '$baseUrl/customer/checkout/place-order';
+  static const String createCardPayment = '$baseUrl/customer/checkout/card/create';
+  static const String verifyCardPayment = '$baseUrl/customer/checkout/card/verify';
 
   static const String myOrders = '$baseUrl/customer/orders';
   static String trackOrder(String orderCode) => '$baseUrl/customer/orders/track/$orderCode';

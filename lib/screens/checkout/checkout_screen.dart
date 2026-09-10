@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:razorpay_flutter/razorpay_flutter.dart';
 import '../../services/profile_service.dart';
 import '../../services/checkout_service.dart';
 import '../../models/address.dart';
@@ -29,12 +30,18 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   String? _couponError;
 
   bool _placing = false;
+  late final Razorpay _razorpay;
+  bool _paymentOpening = false;
   String? _placeError;
   double _walletBalance = 0;
 
   @override
   void initState() {
     super.initState();
+    _razorpay = Razorpay();
+    _razorpay.on(Razorpay.EVENT_PAYMENT_SUCCESS, _onPaymentSuccess);
+    _razorpay.on(Razorpay.EVENT_PAYMENT_ERROR, _onPaymentError);
+    _razorpay.on(Razorpay.EVENT_EXTERNAL_WALLET, _onExternalWallet);
     _loadAddresses();
     ProfileService.wallet().then((r) {
       if (mounted) setState(() => _walletBalance = r.$1);
@@ -89,6 +96,82 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     return t < 0 ? 0 : t;
   }
 
+  Future<void> _onPaymentSuccess(PaymentSuccessResponse response) async {
+    if (!mounted || _paymentOpening) return;
+    setState(() { _paymentOpening = true; _placeError = null; });
+    try {
+      final order = await CheckoutService.verifyCardPayment(
+        razorpayOrderId: response.orderId ?? '',
+        razorpayPaymentId: response.paymentId ?? '',
+        razorpaySignature: response.signature ?? '',
+      );
+      if (!mounted) return;
+      context.read<AppState>().refreshCartCount();
+      Navigator.of(context).pushReplacement(MaterialPageRoute(builder: (_) => OrderPlacedScreen(orderCode: order['order_code'].toString())));
+    } catch (e) {
+      if (mounted) setState(() => _placeError = e.toString());
+    } finally {
+      if (mounted) setState(() => _paymentOpening = false);
+    }
+  }
+
+  void _onPaymentError(PaymentFailureResponse response) {
+    if (!mounted) return;
+    setState(() {
+      _paymentOpening = false;
+      _placing = false;
+      _placeError = response.message ?? 'Card payment failed. Your order was not placed.';
+    });
+  }
+
+  void _onExternalWallet(ExternalWalletResponse response) {
+    if (!mounted) return;
+    setState(() {
+      _paymentOpening = false;
+      _placing = false;
+      _placeError = 'External wallets are not enabled. Please pay by card, Cash on Delivery, or wallet.';
+    });
+  }
+
+  Future<void> _startCardPayment() async {
+    if (_selectedAddressId == null) {
+      setState(() => _placeError = AppLocalizations.of(context)!.pleaseSelectDeliveryAddress);
+      return;
+    }
+    setState(() { _placing = true; _placeError = null; });
+    try {
+      final payment = await CheckoutService.createCardPayment(addressId: _selectedAddressId!, couponId: _couponId);
+      final key = payment['razorpay_key_id']?.toString();
+      final orderId = payment['razorpay_order_id']?.toString();
+      final amount = int.tryParse(payment['amount_paise']?.toString() ?? '') ?? 0;
+      if (key == null || orderId == null || amount <= 0) throw Exception('Could not start card payment.');
+      _paymentOpening = true;
+      _razorpay.open({
+        'key': key,
+        'amount': amount,
+        'currency': 'INR',
+        'name': 'Jeevi Foodie Delivery',
+        'description': 'Order payment',
+        'order_id': orderId,
+        // Explicitly expose only cards. UPI and external wallets are intentionally disabled.
+        'config': {
+          'display': {
+            'blocks': {
+              'card': {
+                'name': 'Cards',
+                'instruments': [{'method': 'card'}],
+              },
+            },
+            'sequence': ['block.card'],
+            'preferences': {'show_default_blocks': false},
+          },
+        },
+      });
+    } catch (e) {
+      if (mounted) { setState(() { _placing = false; _paymentOpening = false; _placeError = e.toString(); }); }
+    }
+  }
+
   Future<void> _placeOrder() async {
     if (_selectedAddressId == null) {
       setState(() => _placeError = AppLocalizations.of(context)!.pleaseSelectDeliveryAddress);
@@ -98,6 +181,10 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       _placing = true;
       _placeError = null;
     });
+    if (_paymentMethod == 'online') {
+      await _startCardPayment();
+      return;
+    }
     try {
       final order = await CheckoutService.placeOrder(
         addressId: _selectedAddressId!,
@@ -143,7 +230,11 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                 await Navigator.of(context).push(
                   MaterialPageRoute(builder: (_) => const AddAddressScreen()),
                 );
-                _loadAddresses();
+                _razorpay = Razorpay();
+    _razorpay.on(Razorpay.EVENT_PAYMENT_SUCCESS, _onPaymentSuccess);
+    _razorpay.on(Razorpay.EVENT_PAYMENT_ERROR, _onPaymentError);
+    _razorpay.on(Razorpay.EVENT_EXTERNAL_WALLET, _onExternalWallet);
+    _loadAddresses();
               },
               icon: const Icon(Icons.add),
               label: Text(t.addNewAddress),
@@ -188,6 +279,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
             groupValue: _paymentMethod,
             onChanged: (v) => setState(() => _paymentMethod = v!),
             title: Text(t.onlinePayment),
+            subtitle: const Text('Card only • UPI and external wallets are disabled'),
           ),
           RadioListTile<String>(
             value: 'wallet',
@@ -211,7 +303,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
               child: Text(_placeError!, style: const TextStyle(color: Colors.red)),
             ),
           ElevatedButton(
-            onPressed: _placing ? null : _placeOrder,
+            onPressed: (_placing || _paymentOpening) ? null : _placeOrder,
             child: _placing
                 ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
                 : Text(t.placeOrder),
@@ -219,6 +311,13 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         ],
       ),
     );
+  }
+
+  @override
+  void dispose() {
+    _razorpay.clear();
+    _couponController.dispose();
+    super.dispose();
   }
 
   Widget _summaryRow(String label, double value, {bool bold = false}) {

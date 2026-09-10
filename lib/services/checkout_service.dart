@@ -19,6 +19,27 @@ class CheckoutService {
     );
   }
 
+  static Future<Map<String, dynamic>> createCardPayment({required int addressId, int? couponId}) async {
+    final res = await ApiClient.post(ApiConfig.createCardPayment, {
+      'address_id': addressId,
+      if (couponId != null) 'coupon_id': couponId,
+    });
+    return res;
+  }
+
+  static Future<Map<String, dynamic>> verifyCardPayment({
+    required String razorpayOrderId,
+    required String razorpayPaymentId,
+    required String razorpaySignature,
+  }) async {
+    final res = await ApiClient.post(ApiConfig.verifyCardPayment, {
+      'razorpay_order_id': razorpayOrderId,
+      'razorpay_payment_id': razorpayPaymentId,
+      'razorpay_signature': razorpaySignature,
+    });
+    return res['order'] as Map<String, dynamic>;
+  }
+
   static Future<Map<String, dynamic>> placeOrder({
     required int addressId,
     required String paymentMethod,
