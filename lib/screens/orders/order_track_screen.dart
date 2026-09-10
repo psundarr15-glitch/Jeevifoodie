@@ -26,14 +26,14 @@ class _OrderTrackScreenState extends State<OrderTrackScreen> {
   final MapController _mapController = MapController();
   bool _mapReady = false;
 
-  static const _stages = ['placed', 'confirmed', 'preparing', 'out_for_delivery', 'delivered'];
+  static const _stages = ['placed', 'confirmed', 'preparing', 'picked_up', 'out_for_delivery', 'delivered'];
 
   @override
   void initState() {
     super.initState();
     _load();
     // Poll every 15s so status updates without the user manually refreshing.
-    _poll = Timer.periodic(const Duration(seconds: 15), (_) => _load());
+    _poll = Timer.periodic(const Duration(seconds: 5), (_) => _load());
   }
 
   void _load() {
@@ -189,6 +189,8 @@ class _OrderTrackScreenState extends State<OrderTrackScreen> {
         return t.stageConfirmed;
       case 'preparing':
         return t.stagePreparing;
+      case 'picked_up':
+        return 'Picked Up';
       case 'out_for_delivery':
         return t.stageOutForDelivery;
       case 'delivered':
