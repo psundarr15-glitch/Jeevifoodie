@@ -38,14 +38,14 @@ class ChatService {
     // one wasn't legitimate and it fell back to the admin thread) - used
     // again by sendImage() so the upload lands in the exact same
     // threadId folder as this thread, not a client-guessed one.
-    _restaurantId = res['restaurant_id'] as int?;
+    _restaurantId = res['restaurant_id'] == null ? null : int.tryParse(res['restaurant_id'].toString());
     // From the backend (not local app state) so the thread doc always
     // gets a real name/email even if the profile wasn't loaded locally —
     // this is what the admin/manager inbox list displays per thread.
     _customerName = res['customer_name'] as String?;
     _customerEmail = res['customer_email'] as String?;
     _restaurantName = restaurantName;
-    _orderId = orderId ?? (res['order_id'] as int?);
+    _orderId = orderId ?? (res['order_id'] == null ? null : int.tryParse(res['order_id'].toString()));
     _orderCode = orderCode ?? res['order_code'] as String?;
 
     if (!_signedIn) {
