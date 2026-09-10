@@ -1,7 +1,10 @@
 import 'dart:convert';
 import 'dart:io';
+import 'dart:async';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
+
+const Duration _apiTimeout = Duration(seconds: 20);
 
 /// Thin wrapper around http that:
 /// - attaches "Authorization: Bearer <token>" automatically
@@ -94,7 +97,14 @@ class ApiClient {
       }
     }
 
-    final streamed = await request.send();
+    http.StreamedResponse streamed;
+    try {
+      streamed = await request.send().timeout(_apiTimeout);
+    } on SocketException {
+      throw ApiException('No internet connection. Please check your network and try again.', 0);
+    } on TimeoutException {
+      throw ApiException('The upload took too long. Please try again.', 0);
+    }
     final res = await http.Response.fromStream(streamed);
     return _decode(res);
   }
