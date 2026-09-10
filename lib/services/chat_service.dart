@@ -19,6 +19,8 @@ class ChatService {
   String? _customerName;
   String? _customerEmail;
   String? _restaurantName;
+  int? _orderId;
+  String? _orderCode;
   bool _signedIn = false;
 
   /// Must be called once before [messages]/[send] — signs this device in
@@ -28,8 +30,8 @@ class ChatService {
   /// [restaurantName] is only used to denormalize onto the thread doc (so
   /// the Chats list can show "Aachi Samayal" instead of a blank title) —
   /// pass it whenever the caller already has it (e.g. from order tracking).
-  Future<void> connect({int? restaurantId, String? restaurantName}) async {
-    final res = await ApiClient.get(ApiConfig.chatFirebaseToken(restaurantId));
+  Future<void> connect({int? restaurantId, String? restaurantName, int? orderId, String? orderCode}) async {
+    final res = await ApiClient.get(ApiConfig.chatFirebaseToken(restaurantId, orderId));
     final token = res['token'] as String;
     _threadId = res['thread_id'] as String;
     // The backend's own validated restaurant_id (null if the requested
@@ -43,6 +45,8 @@ class ChatService {
     _customerName = res['customer_name'] as String?;
     _customerEmail = res['customer_email'] as String?;
     _restaurantName = restaurantName;
+    _orderId = orderId ?? (res['order_id'] as int?);
+    _orderCode = orderCode ?? res['order_code'] as String?;
 
     if (!_signedIn) {
       await FirebaseAuth.instance.signInWithCustomToken(token);
@@ -113,6 +117,8 @@ class ChatService {
         'lastMessageAt': FieldValue.serverTimestamp(),
         'unreadForStaff': FieldValue.increment(1),
         'unreadForCustomer': 0,
+        if (_orderId != null) 'orderId': _orderId,
+        if (_orderCode != null) 'orderCode': _orderCode,
         // Sending a message after the chat ended naturally re-opens it —
         // no separate "reopen" step needed for the customer side.
         if (wasClosed) 'status': 'open',
@@ -132,6 +138,8 @@ class ChatService {
         'customerName': _customerName,
         'customerEmail': _customerEmail,
         if (isRestaurant) 'restaurantName': _restaurantName,
+        if (isRestaurant && _orderId != null) 'orderId': _orderId,
+        if (isRestaurant && _orderCode != null) 'orderCode': _orderCode,
         'lastMessage': text,
         'lastMessageAt': FieldValue.serverTimestamp(),
         'unreadForStaff': 1,
@@ -145,6 +153,8 @@ class ChatService {
       'message': text,
       'type': 'text',
       'createdAt': FieldValue.serverTimestamp(),
+      if (_orderId != null) 'orderId': _orderId,
+      if (_orderCode != null) 'orderCode': _orderCode,
     });
   }
 
@@ -185,6 +195,8 @@ class ChatService {
         'customerName': _customerName,
         'customerEmail': _customerEmail,
         if (isRestaurant) 'restaurantName': _restaurantName,
+        if (isRestaurant && _orderId != null) 'orderId': _orderId,
+        if (isRestaurant && _orderCode != null) 'orderCode': _orderCode,
         'lastMessage': captionText,
         'lastMessageAt': FieldValue.serverTimestamp(),
         'unreadForStaff': 1,
@@ -199,6 +211,8 @@ class ChatService {
       'type': 'image',
       'imageUrl': imageUrl,
       'createdAt': FieldValue.serverTimestamp(),
+      if (_orderId != null) 'orderId': _orderId,
+      if (_orderCode != null) 'orderCode': _orderCode,
     });
   }
 

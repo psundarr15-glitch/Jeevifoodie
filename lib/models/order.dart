@@ -39,6 +39,8 @@ class OrderTrackingInfo {
   final int? restaurantId;
   final String? restaurantName;
   final bool reviewed;
+  final String? deliveryOtp;
+  final bool deliveryOtpRequired;
   final List<Map<String, dynamic>> items;
   final List<Map<String, dynamic>> history;
 
@@ -56,6 +58,8 @@ class OrderTrackingInfo {
     this.restaurantId,
     this.restaurantName,
     this.reviewed = false,
+    this.deliveryOtp,
+    this.deliveryOtpRequired = false,
     this.items = const [],
     this.history = const [],
   });
@@ -74,6 +78,8 @@ class OrderTrackingInfo {
         restaurantId: j['restaurant_id'] != null ? int.tryParse(j['restaurant_id'].toString()) : null,
         restaurantName: j['restaurant_name']?.toString(),
         reviewed: j['reviewed'] == true,
+        deliveryOtp: j['delivery_otp']?.toString(),
+        deliveryOtpRequired: j['delivery_otp_required'] == true,
         items: (j['items'] as List? ?? []).cast<Map<String, dynamic>>(),
         history: (j['history'] as List? ?? []).cast<Map<String, dynamic>>(),
       );

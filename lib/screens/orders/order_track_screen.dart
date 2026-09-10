@@ -93,6 +93,24 @@ class _OrderTrackScreenState extends State<OrderTrackScreen> {
                   ),
                 ),
               const SizedBox(height: 16),
+              if (info.deliveryOtpRequired && info.deliveryOtp != null && info.deliveryOtp!.isNotEmpty) ...[
+                Card(
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(children: [const Icon(Icons.lock_outline), const SizedBox(width: 8), Text('Delivery OTP', style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold))]),
+                        const SizedBox(height: 8),
+                        Text(info.deliveryOtp!, style: Theme.of(context).textTheme.headlineSmall?.copyWith(letterSpacing: 5, fontWeight: FontWeight.bold)),
+                        const SizedBox(height: 6),
+                        Text('Share this OTP with the delivery partner only when your order arrives.', style: TextStyle(color: Colors.grey.shade600, fontSize: 12.5)),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+              ],
               if (info.restaurantId != null)
                 Padding(
                   padding: const EdgeInsets.only(bottom: 16),
@@ -102,6 +120,8 @@ class _OrderTrackScreenState extends State<OrderTrackScreen> {
                         builder: (_) => ChatScreen(
                           restaurantId: info.restaurantId,
                           restaurantName: info.restaurantName,
+                          orderId: info.orderId,
+                          orderCode: widget.orderCode,
                         ),
                       ),
                     ),

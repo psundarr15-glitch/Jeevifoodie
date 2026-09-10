@@ -48,9 +48,12 @@ class ApiConfig {
   // No restaurantId means the general app-admin thread; a restaurantId
   // means that restaurant's manager thread (the backend only honors a
   // restaurantId the customer actually has an order from).
-  static String chatFirebaseToken([int? restaurantId]) => restaurantId != null
-      ? '$baseUrl/customer/chat/firebase-token?restaurant_id=$restaurantId'
-      : '$baseUrl/customer/chat/firebase-token';
+  static String chatFirebaseToken([int? restaurantId, int? orderId]) {
+    final params = <String>[];
+    if (restaurantId != null) params.add('restaurant_id=$restaurantId');
+    if (orderId != null) params.add('order_id=$orderId');
+    return '$baseUrl/customer/chat/firebase-token${params.isEmpty ? '' : '?${params.join('&')}'}';
+  }
 
   // Chat image attachments upload here (saved on our own server, not
   // Firebase Storage) — only the returned URL goes into the Firestore

@@ -13,7 +13,9 @@ import '../../l10n/app_localizations.dart';
 class ChatScreen extends StatefulWidget {
   final int? restaurantId;
   final String? restaurantName;
-  const ChatScreen({super.key, this.restaurantId, this.restaurantName});
+  final int? orderId;
+  final String? orderCode;
+  const ChatScreen({super.key, this.restaurantId, this.restaurantName, this.orderId, this.orderCode});
 
   @override
   State<ChatScreen> createState() => _ChatScreenState();
@@ -35,7 +37,7 @@ class _ChatScreenState extends State<ChatScreen> {
 
   Future<void> _connect() async {
     try {
-      await _chatService.connect(restaurantId: widget.restaurantId, restaurantName: widget.restaurantName);
+      await _chatService.connect(restaurantId: widget.restaurantId, restaurantName: widget.restaurantName, orderId: widget.orderId, orderCode: widget.orderCode);
       await _chatService.markRead();
       if (mounted) setState(() => _connecting = false);
     } catch (e) {
@@ -224,6 +226,24 @@ class _ChatScreenState extends State<ChatScreen> {
       ),
       body: Column(
         children: [
+          if (widget.restaurantId != null && widget.orderId != null)
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+              color: AppTheme.primary.withOpacity(0.08),
+              child: Row(
+                children: [
+                  const Icon(Icons.receipt_long_outlined, size: 18),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Order ${widget.orderCode != null && widget.orderCode!.isNotEmpty ? '#${widget.orderCode}' : '#${widget.orderId}'}',
+                      style: const TextStyle(fontWeight: FontWeight.w600),
+                    ),
+                  ),
+                ],
+              ),
+            ),
           Expanded(
             child: _connecting
                 ? const Center(child: CircularProgressIndicator())
