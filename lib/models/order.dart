@@ -79,7 +79,10 @@ class OrderTrackingInfo {
         restaurantName: j['restaurant_name']?.toString(),
         reviewed: j['reviewed'] == true,
         deliveryOtp: j['delivery_otp']?.toString(),
-        deliveryOtpRequired: j['delivery_otp_required'] == true,
+        deliveryOtpRequired: j['delivery_otp_required'] == true ||
+            j['delivery_otp_required']?.toString().toLowerCase() == 'true' ||
+            j['delivery_otp_required']?.toString() == '1' ||
+            (j['delivery_otp']?.toString().trim().isNotEmpty ?? false),
         items: (j['items'] as List? ?? []).cast<Map<String, dynamic>>(),
         history: (j['history'] as List? ?? []).cast<Map<String, dynamic>>(),
       );

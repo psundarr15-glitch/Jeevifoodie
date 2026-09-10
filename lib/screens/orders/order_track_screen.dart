@@ -93,7 +93,8 @@ class _OrderTrackScreenState extends State<OrderTrackScreen> {
                   ),
                 ),
               const SizedBox(height: 16),
-              if (info.deliveryOtpRequired && info.deliveryOtp != null && info.deliveryOtp!.isNotEmpty) ...[
+              if (info.deliveryOtp != null && info.deliveryOtp!.trim().isNotEmpty &&
+                  (info.deliveryOtpRequired || info.orderStatus == 'out_for_delivery')) ...[
                 Card(
                   child: Padding(
                     padding: const EdgeInsets.all(16),
