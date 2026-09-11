@@ -1,5 +1,154 @@
-import 'package:flutter/material.dart';import 'package:cloud_firestore/cloud_firestore.dart';import '../../services/chat_service.dart';import '../../theme.dart';import '../../l10n/app_localizations.dart';import 'chat_screen.dart';
-class ChatsListScreen extends StatefulWidget{const ChatsListScreen({super.key});@override State<ChatsListScreen> createState()=>_ChatsListScreenState();}
-class _ChatsListScreenState extends State<ChatsListScreen>{final _search=TextEditingController();String _q='';final _bootstrap=ChatService();bool _connecting=true;String? _error;@override void initState(){super.initState();_connect();}Future<void> _connect()async{try{await _bootstrap.connect();if(mounted)setState(()=>_connecting=false);}catch(e){if(mounted)setState((){_connecting=false;_error=e.toString();});}}@override void dispose(){_search.dispose();super.dispose();}
-Widget _avatar(Map<String,dynamic>d){final delivery=d['recipientRole']=='delivery';final manager=d['recipientRole']=='manager';return Container(width:56,height:56,decoration:BoxDecoration(color:AppTheme.primary.withOpacity(.08),shape:BoxShape.circle),child:Icon(delivery?Icons.delivery_dining_rounded:manager?Icons.storefront_rounded:Icons.support_agent_rounded,color:AppTheme.primary));}
-@override Widget build(BuildContext c){final t=AppLocalizations.of(c)!;return Scaffold(backgroundColor:AppTheme.scaffoldBg(c),body:SafeArea(child:Column(children:[Padding(padding:const EdgeInsets.fromLTRB(18,12,18,14),child:Row(children:[Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[const Text('Messages',style:TextStyle(fontSize:28,fontWeight:FontWeight.w900)),const SizedBox(height:3),Text('Stay connected with your orders',style:TextStyle(color:Colors.grey,fontSize:12))]),Container(width:44,height:44,decoration:BoxDecoration(color:AppTheme.surface(c),shape:BoxShape.circle),child:const Icon(Icons.mark_unread_chat_alt_rounded,color:AppTheme.primary))])),Padding(padding:const EdgeInsets.fromLTRB(18,0,18,12),child:Container(height:48,decoration:BoxDecoration(color:AppTheme.surface(c),borderRadius:BorderRadius.circular(16)),child:TextField(controller:_search,onChanged:(v)=>setState(()=>_q=v),decoration:InputDecoration(hintText:t.chatsSearchHint,prefixIcon:const Icon(Icons.search_rounded),border:InputBorder.none,contentPadding:const EdgeInsets.symmetric(vertical:14))))),Expanded(child:_connecting?const Center(child:CircularProgressIndicator()):_error!=null?Center(child:Padding(padding:const EdgeInsets.all(24),child:Text(_error!,textAlign:TextAlign.center)):StreamBuilder<List<Map<String,dynamic>>>(stream:ChatService.myThreads(),builder:(c,s){if(s.connectionState==ConnectionState.waiting)return const Center(child:CircularProgressIndicator());if(s.hasError)return Center(child:Text('${s.error}'));final list=(s.data??[]).where((d){final q=_q.trim().toLowerCase();if(q.isEmpty)return true;return (d['restaurantName']?.toString().toLowerCase().contains(q)??false)||(d['lastMessage']?.toString().toLowerCase().contains(q)??false)||(d['orderCode']?.toString().toLowerCase().contains(q)??false);}).toList();if(list.isEmpty)return ListView(children:[const SizedBox(height:90),Center(child:Container(width:88,height:88,decoration:BoxDecoration(color:AppTheme.primary.withOpacity(.08),shape:BoxShape.circle),child:const Icon(Icons.forum_outlined,size:42,color:AppTheme.primary))),const SizedBox(height:16),const Center(child:Text('No conversations yet',style:TextStyle(fontWeight:FontWeight.w800))),const SizedBox(height:6),Center(child:Text('Your order conversations will appear here',style:TextStyle(color:Colors.grey,fontSize:12)))]);return ListView.separated(padding:const EdgeInsets.fromLTRB(18,4,18,28),itemCount:list.length,separatorBuilder:(_,__)=>const SizedBox(height:10),itemBuilder:(c,i){final d=list[i];final manager=d['recipientRole']=='manager',delivery=d['recipientRole']=='delivery';final title=delivery?'Delivery Partner':manager?(d['restaurantName']?.toString()??'Restaurant'):'JEEVI Support';final unread=(d['unreadForCustomer'] as num?)?.toInt()??0;final ts=d['lastMessageAt'];final time=ts is Timestamp?ts.toDate():null;return Dismissible(key:ValueKey(d['threadId']),direction:DismissDirection.endToStart,confirmDismiss:(_)=>showDialog<bool>(context:c,builder:(x)=>AlertDialog(title:const Text('Delete this chat?'),actions:[TextButton(onPressed:()=>Navigator.pop(x,false),child:const Text('Cancel')),TextButton(onPressed:()=>Navigator.pop(x,true),child:const Text('Delete'))])).then((v){if(v==true)ChatService.deleteThread(d['threadId'].toString());return v;}),background:Container(alignment:Alignment.centerRight,padding:const EdgeInsets.only(right:22),decoration:BoxDecoration(color:Colors.red,borderRadius:BorderRadius.circular(20)),child:const Icon(Icons.delete_outline,color:Colors.white)),child:Container(decoration:BoxDecoration(color:AppTheme.surface(c),borderRadius:BorderRadius.circular(20),boxShadow:[BoxShadow(color:Colors.black.withOpacity(.03),blurRadius:12,offset:const Offset(0,5))]),child:ListTile(contentPadding:const EdgeInsets.symmetric(horizontal:14,vertical:7),leading:_avatar(d),title:Text(title,style:const TextStyle(fontWeight:FontWeight.w900)),subtitle:Text('${d['orderCode']!=null?'Order #${d['orderCode']} • ':''}${d['lastMessage']?.toString()??''}',maxLines:1,overflow:TextOverflow.ellipsis,style:TextStyle(color:AppTheme.textSecondary(c),fontSize:12)),trailing:Column(mainAxisAlignment:MainAxisAlignment.center,crossAxisAlignment:CrossAxisAlignment.end,children:[if(time!=null)Text('${time.hour.toString().padLeft(2,'0')}:${time.minute.toString().padLeft(2,'0')}',style:TextStyle(color:AppTheme.textSecondary(c),fontSize:10)),if(unread>0)Container(margin:const EdgeInsets.only(top:6),padding:const EdgeInsets.symmetric(horizontal:7,vertical:3),decoration:BoxDecoration(color:AppTheme.primary,borderRadius:BorderRadius.circular(10)),child:Text('$unread',style:const TextStyle(color:Colors.white,fontSize:10,fontWeight:FontWeight.w900)))]),onTap:()=>Navigator.of(c).push(MaterialPageRoute(builder:(_)=>manager?ChatScreen(restaurantId:(d['restaurantId'] as num?)?.toInt(),restaurantName:d['restaurantName']?.toString(),orderId:(d['orderId'] as num?)?.toInt()):delivery?ChatScreen(orderId:(d['orderId'] as num?)?.toInt(),deliveryPartnerId:(d['deliveryPartnerId'] as num?)?.toInt()):const ChatScreen()))));}));})])));}
+import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import '../../services/chat_service.dart';
+import '../../theme.dart';
+import '../../l10n/app_localizations.dart';
+import 'chat_screen.dart';
+
+class ChatsListScreen extends StatefulWidget {
+  const ChatsListScreen({super.key});
+  @override State<ChatsListScreen> createState() => _ChatsListScreenState();
+}
+
+class _ChatsListScreenState extends State<ChatsListScreen> {
+  final _search = TextEditingController();
+  String _q = '';
+  final _bootstrap = ChatService();
+  bool _connecting = true;
+  String? _error;
+
+  @override void initState() { super.initState(); _connect(); }
+  Future<void> _connect() async {
+    try { await _bootstrap.connect(); if (mounted) setState(() => _connecting = false); }
+    catch (e) { if (mounted) setState(() { _connecting = false; _error = e.toString(); }); }
+  }
+  @override void dispose() { _search.dispose(); super.dispose(); }
+
+  Widget _avatar(Map<String, dynamic> d) {
+    final delivery = d['recipientRole'] == 'delivery';
+    final manager = d['recipientRole'] == 'manager';
+    return Container(
+      width: 56, height: 56,
+      decoration: BoxDecoration(color: AppTheme.primary.withOpacity(.08), shape: BoxShape.circle),
+      child: Icon(delivery ? Icons.delivery_dining_rounded : manager ? Icons.storefront_rounded : Icons.support_agent_rounded, color: AppTheme.primary),
+    );
+  }
+
+  Future<bool?> _confirmDelete(BuildContext context) => showDialog<bool>(
+    context: context,
+    builder: (x) => AlertDialog(
+      title: const Text('Delete this chat?'),
+      actions: [
+        TextButton(onPressed: () => Navigator.pop(x, false), child: const Text('Cancel')),
+        TextButton(onPressed: () => Navigator.pop(x, true), child: const Text('Delete')),
+      ],
+    ),
+  );
+
+  @override
+  Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context)!;
+    return Scaffold(
+      backgroundColor: AppTheme.scaffoldBg(context),
+      body: SafeArea(
+        child: Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(18, 12, 18, 14),
+              child: Row(
+                children: [
+                  Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    const Text('Messages', style: TextStyle(fontSize: 28, fontWeight: FontWeight.w900)),
+                    const SizedBox(height: 3),
+                    Text('Stay connected with your orders', style: TextStyle(color: AppTheme.textSecondary(context), fontSize: 12)),
+                  ])),
+                  Container(width: 44, height: 44, decoration: BoxDecoration(color: AppTheme.surface(context), shape: BoxShape.circle), child: const Icon(Icons.mark_unread_chat_alt_rounded, color: AppTheme.primary)),
+                ],
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(18, 0, 18, 12),
+              child: Container(
+                height: 48,
+                decoration: BoxDecoration(color: AppTheme.surface(context), borderRadius: BorderRadius.circular(16)),
+                child: TextField(controller: _search, onChanged: (v) => setState(() => _q = v), decoration: InputDecoration(hintText: t.chatsSearchHint, prefixIcon: const Icon(Icons.search_rounded), border: InputBorder.none, contentPadding: const EdgeInsets.symmetric(vertical: 14))),
+              ),
+            ),
+            Expanded(
+              child: _connecting
+                  ? const Center(child: CircularProgressIndicator())
+                  : _error != null
+                      ? Center(child: Padding(padding: const EdgeInsets.all(24), child: Text(_error!, textAlign: TextAlign.center)))
+                      : StreamBuilder<List<Map<String, dynamic>>>(
+                          stream: ChatService.myThreads(),
+                          builder: (context, snapshot) {
+                            if (snapshot.connectionState == ConnectionState.waiting) return const Center(child: CircularProgressIndicator());
+                            if (snapshot.hasError) return Center(child: Text('${snapshot.error}'));
+                            final q = _q.trim().toLowerCase();
+                            final list = (snapshot.data ?? []).where((d) {
+                              if (q.isEmpty) return true;
+                              return (d['restaurantName']?.toString().toLowerCase().contains(q) ?? false) ||
+                                  (d['lastMessage']?.toString().toLowerCase().contains(q) ?? false) ||
+                                  (d['orderCode']?.toString().toLowerCase().contains(q) ?? false);
+                            }).toList();
+                            if (list.isEmpty) {
+                              return ListView(children: [
+                                const SizedBox(height: 90),
+                                Center(child: Container(width: 88, height: 88, decoration: BoxDecoration(color: AppTheme.primary.withOpacity(.08), shape: BoxShape.circle), child: const Icon(Icons.forum_outlined, size: 42, color: AppTheme.primary))),
+                                const SizedBox(height: 16),
+                                const Center(child: Text('No conversations yet', style: TextStyle(fontWeight: FontWeight.w800))),
+                                const SizedBox(height: 6),
+                                Center(child: Text('Your order conversations will appear here', style: TextStyle(color: AppTheme.textSecondary(context), fontSize: 12))),
+                              ]);
+                            }
+                            return ListView.separated(
+                              padding: const EdgeInsets.fromLTRB(18, 4, 18, 28),
+                              itemCount: list.length,
+                              separatorBuilder: (_, __) => const SizedBox(height: 10),
+                              itemBuilder: (context, i) {
+                                final d = list[i];
+                                final manager = d['recipientRole'] == 'manager';
+                                final delivery = d['recipientRole'] == 'delivery';
+                                final title = delivery ? 'Delivery Partner' : manager ? (d['restaurantName']?.toString() ?? 'Restaurant') : 'JEEVI Support';
+                                final unread = (d['unreadForCustomer'] as num?)?.toInt() ?? 0;
+                                final ts = d['lastMessageAt'];
+                                final time = ts is Timestamp ? ts.toDate() : null;
+                                return Dismissible(
+                                  key: ValueKey(d['threadId']),
+                                  direction: DismissDirection.endToStart,
+                                  confirmDismiss: (_) async {
+                                    final ok = await _confirmDelete(context);
+                                    if (ok == true) await ChatService.deleteThread(d['threadId'].toString());
+                                    return ok;
+                                  },
+                                  background: Container(alignment: Alignment.centerRight, padding: const EdgeInsets.only(right: 22), decoration: BoxDecoration(color: Colors.red, borderRadius: BorderRadius.circular(20)), child: const Icon(Icons.delete_outline, color: Colors.white)),
+                                  child: Container(
+                                    decoration: BoxDecoration(color: AppTheme.surface(context), borderRadius: BorderRadius.circular(20), boxShadow: [BoxShadow(color: Colors.black.withOpacity(.03), blurRadius: 12, offset: const Offset(0, 5))]),
+                                    child: ListTile(
+                                      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+                                      leading: _avatar(d),
+                                      title: Text(title, style: const TextStyle(fontWeight: FontWeight.w900)),
+                                      subtitle: Text('${d['orderCode'] != null ? 'Order #${d['orderCode']} • ' : ''}${d['lastMessage']?.toString() ?? ''}', maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(color: AppTheme.textSecondary(context), fontSize: 12)),
+                                      trailing: Column(mainAxisAlignment: MainAxisAlignment.center, crossAxisAlignment: CrossAxisAlignment.end, children: [
+                                        if (time != null) Text('${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')}', style: TextStyle(color: AppTheme.textSecondary(context), fontSize: 10)),
+                                        if (unread > 0) Container(margin: const EdgeInsets.only(top: 6), padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3), decoration: BoxDecoration(color: AppTheme.primary, borderRadius: BorderRadius.circular(10)), child: Text('$unread', style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.w900))),
+                                      ]),
+                                      onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => manager
+                                          ? ChatScreen(restaurantId: (d['restaurantId'] as num?)?.toInt(), restaurantName: d['restaurantName']?.toString(), orderId: (d['orderId'] as num?)?.toInt())
+                                          : delivery
+                                              ? ChatScreen(orderId: (d['orderId'] as num?)?.toInt(), deliveryPartnerId: (d['deliveryPartnerId'] as num?)?.toInt())
+                                              : const ChatScreen())),
+                                    ),
+                                  ),
+                                );
+                              },
+                            );
+                          },
+                        ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}

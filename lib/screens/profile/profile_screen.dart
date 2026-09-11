@@ -1,17 +1,241 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../../config/api_config.dart';import '../../services/profile_service.dart';import '../../services/auth_service.dart';import '../../state/app_state.dart';import '../../theme.dart';
-import '../auth/login_screen.dart';import '../orders/orders_screen.dart';import 'addresses_screen.dart';import 'coupons_screen.dart';import 'delivery_partner_signup_screen.dart';import 'account_screen.dart';import 'help_support_screen.dart';import 'language_screen.dart';import 'payment_methods_screen.dart';import 'static_page_screen.dart';import 'vendor_signup_screen.dart';import 'wallet_screen.dart';import '../../l10n/app_localizations.dart';import '../chat/chat_screen.dart';
-class ProfileScreen extends StatefulWidget{const ProfileScreen({super.key});@override State<ProfileScreen> createState()=>_ProfileScreenState();}
-class _ProfileScreenState extends State<ProfileScreen>{late Future<ProfileData> _future;@override void initState(){super.initState();_future=ProfileService.view();}void _push(Widget s)=>Navigator.of(context).push(MaterialPageRoute(builder:(_)=>s));Future<void> _logout()async{await AuthService.logout();if(!mounted)return;context.read<AppState>().logout();Navigator.of(context).pushAndRemoveUntil(MaterialPageRoute(builder:(_)=>const LoginScreen()),(_)=>false);}String _date(dynamic raw){final d=DateTime.tryParse(raw?.toString()??'');if(d==null)return '';const m=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];return '${d.day} ${m[d.month-1]}, ${d.year}';}
-@override Widget build(BuildContext c){final t=AppLocalizations.of(c)!;return Scaffold(backgroundColor:AppTheme.scaffoldBg(c),body:FutureBuilder<ProfileData>(future:_future,builder:(c,s){if(s.connectionState!=ConnectionState.done)return const Center(child:CircularProgressIndicator());if(s.hasError)return Center(child:Text(t.errorLabel(s.error.toString())));final u=s.data!.user;final name=u['name']?.toString()??'';final wallet=double.tryParse(u['wallet_balance']?.toString()??'0')??0;return ListView(padding:const EdgeInsets.fromLTRB(18,12,18,34),children:[
-Container(padding:const EdgeInsets.all(20),decoration:BoxDecoration(gradient:const LinearGradient(colors:[AppTheme.primary,AppTheme.primaryDark]),borderRadius:BorderRadius.circular(26),boxShadow:[BoxShadow(color:AppTheme.primary.withOpacity(.22),blurRadius:24,offset:const Offset(0,10))]),child:Row(children:[Container(width:66,height:66,decoration:BoxDecoration(color:Colors.white.withOpacity(.16),shape:BoxShape.circle,border:Border.all(color:Colors.white.withOpacity(.45),width:2)),child:Center(child:Text(name.isNotEmpty?name[0].toUpperCase():'?',style:const TextStyle(color:Colors.white,fontSize:28,fontWeight:FontWeight.w900))),),const SizedBox(width:15),Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[const Text('Welcome back',style:TextStyle(color:Colors.white70,fontSize:12,fontWeight:FontWeight.w600)),const SizedBox(height:3),Text(name,style:const TextStyle(color:Colors.white,fontSize:21,fontWeight:FontWeight.w900)),if(u['created_at']!=null)Text('Member since ${_date(u['created_at'])}',style:const TextStyle(color:Colors.white70,fontSize:11.5))]))]),
-const SizedBox(height:18),_Section(title:t.generalSection,children:[_Tile(Icons.person_outline,t.profileLabel,()=>_push(const AccountScreen())),_Tile(Icons.location_on_outlined,t.myAddress,()=>_push(const AddressesScreen())),_Tile(Icons.translate,t.language,()=>showLanguagePicker(c))]),
-_Section(title:t.promotionalActivitySection,children:[_Tile(Icons.confirmation_number_outlined,t.coupon,()=>_push(const CouponsScreen())),_Tile(Icons.account_balance_wallet_outlined,t.myWallet,()=>_push(const WalletScreen()),trailing:'₹${wallet.toStringAsFixed(0)}')]),
-_Section(title:t.earningsSection,children:[_Tile(Icons.two_wheeler_outlined,t.joinAsDeliveryMan,()=>_push(const DeliveryPartnerSignupScreen())),_Tile(Icons.storefront_outlined,t.openVendor,()=>_push(const VendorSignupScreen()))]),
-_Section(title:t.helpSupportSection,children:[_Tile(Icons.chat_bubble_outline,t.liveChat,()=>_push(const ChatScreen())),_Tile(Icons.headset_mic_outlined,t.helpSupport,()=>_push(const HelpSupportScreen())),_Tile(Icons.info_outline,t.aboutUs,()=>_push(const StaticPageScreen(url:ApiConfig.pageAbout))),_Tile(Icons.description_outlined,t.termsConditions,()=>_push(const StaticPageScreen(url:ApiConfig.pageTerms))),_Tile(Icons.privacy_tip_outlined,t.privacyPolicy,()=>_push(const StaticPageScreen(url:ApiConfig.pagePrivacy))),_Tile(Icons.receipt_long_outlined,t.refundPolicy,()=>_push(const StaticPageScreen(url:ApiConfig.pageRefundPolicy))),_Tile(Icons.local_shipping_outlined,t.shippingPolicy,()=>_push(const StaticPageScreen(url:ApiConfig.pageShippingPolicy)))]),
-_Section(title:t.ordersPaymentsSection,children:[_Tile(Icons.receipt_long_outlined,t.myOrders,()=>_push(const OrdersScreen())),_Tile(Icons.credit_card_outlined,t.paymentMethods,()=>_push(const PaymentMethodsScreen()))]),
-const SizedBox(height:18),SizedBox(height:54,child:OutlinedButton.icon(onPressed:_logout,icon:const Icon(Icons.logout_rounded),label:Text(t.logout,style:const TextStyle(fontWeight:FontWeight.w800)),style:OutlinedButton.styleFrom(foregroundColor:Colors.red,side:BorderSide(color:Colors.red.withOpacity(.3)),shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(17)))))]);});}
+import '../../config/api_config.dart';
+import '../../services/profile_service.dart';
+import '../../services/auth_service.dart';
+import '../../state/app_state.dart';
+import '../../theme.dart';
+import '../auth/login_screen.dart';
+import '../orders/orders_screen.dart';
+import 'addresses_screen.dart';
+import 'coupons_screen.dart';
+import 'delivery_partner_signup_screen.dart';
+import 'account_screen.dart';
+import 'help_support_screen.dart';
+import 'language_screen.dart';
+import 'payment_methods_screen.dart';
+import 'static_page_screen.dart';
+import 'vendor_signup_screen.dart';
+import 'wallet_screen.dart';
+import '../../l10n/app_localizations.dart';
+import '../chat/chat_screen.dart';
+
+class ProfileScreen extends StatefulWidget {
+  const ProfileScreen({super.key});
+  @override
+  State<ProfileScreen> createState() => _ProfileScreenState();
 }
-class _Section extends StatelessWidget{final String title;final List<Widget> children;const _Section({required this.title,required this.children});@override Widget build(BuildContext c)=>Padding(padding:const EdgeInsets.only(bottom:16),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Padding(padding:const EdgeInsets.only(left:4,bottom:9),child:Text(title,style:TextStyle(color:AppTheme.textSecondary(c),fontSize:12,fontWeight:FontWeight.w900,letterSpacing:.7))),Container(decoration:BoxDecoration(color:AppTheme.surface(c),borderRadius:BorderRadius.circular(20),boxShadow:[BoxShadow(color:Colors.black.withOpacity(.03),blurRadius:14,offset:const Offset(0,5))]),child:Column(children:List.generate(children.length,(i)=>Column(children:[children[i],if(i<children.length-1)Divider(height:1,indent:68,color:AppTheme.borderColor(c).withOpacity(.45))]))))]));}
-class _Tile extends StatelessWidget{final IconData icon;final String label;final VoidCallback onTap;final String? trailing;const _Tile(this.icon,this.label,this.onTap,{this.trailing});@override Widget build(BuildContext c)=>ListTile(contentPadding:const EdgeInsets.symmetric(horizontal:15,vertical:3),leading:Container(width:42,height:42,decoration:BoxDecoration(color:AppTheme.primary.withOpacity(.07),borderRadius:BorderRadius.circular(13)),child:Icon(icon,color:AppTheme.primary,size:21)),title:Text(label,style:const TextStyle(fontWeight:FontWeight.w700,fontSize:14)),trailing:trailing!=null?Container(padding:const EdgeInsets.symmetric(horizontal:10,vertical:6),decoration:BoxDecoration(color:AppTheme.primary.withOpacity(.09),borderRadius:BorderRadius.circular(12)),child:Text(trailing!,style:const TextStyle(color:AppTheme.primary,fontWeight:FontWeight.w900,fontSize:12))):const Icon(Icons.chevron_right_rounded,color:Colors.grey),onTap:onTap);}
+
+class _ProfileScreenState extends State<ProfileScreen> {
+  late Future<ProfileData> _future;
+
+  @override
+  void initState() {
+    super.initState();
+    _future = ProfileService.view();
+  }
+
+  void _push(Widget screen) {
+    Navigator.of(context).push(MaterialPageRoute(builder: (_) => screen));
+  }
+
+  Future<void> _logout() async {
+    await AuthService.logout();
+    if (!mounted) return;
+    context.read<AppState>().logout();
+    Navigator.of(context).pushAndRemoveUntil(
+      MaterialPageRoute(builder: (_) => const LoginScreen()),
+      (_) => false,
+    );
+  }
+
+  String _date(dynamic raw) {
+    final d = DateTime.tryParse(raw?.toString() ?? '');
+    if (d == null) return '';
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    return '${d.day} ${months[d.month - 1]}, ${d.year}';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context)!;
+    return Scaffold(
+      backgroundColor: AppTheme.scaffoldBg(context),
+      body: FutureBuilder<ProfileData>(
+        future: _future,
+        builder: (context, snapshot) {
+          if (snapshot.connectionState != ConnectionState.done) {
+            return const Center(child: CircularProgressIndicator());
+          }
+          if (snapshot.hasError) {
+            return Center(child: Text(t.errorLabel(snapshot.error.toString())));
+          }
+
+          final u = snapshot.data!.user;
+          final name = u['name']?.toString() ?? '';
+          final wallet = double.tryParse(u['wallet_balance']?.toString() ?? '0') ?? 0;
+
+          return ListView(
+            padding: const EdgeInsets.fromLTRB(18, 12, 18, 34),
+            children: [
+              Container(
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(colors: [AppTheme.primary, AppTheme.primaryDark]),
+                  borderRadius: BorderRadius.circular(26),
+                  boxShadow: [
+                    BoxShadow(
+                      color: AppTheme.primary.withOpacity(.22),
+                      blurRadius: 24,
+                      offset: const Offset(0, 10),
+                    ),
+                  ],
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 66,
+                      height: 66,
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(.16),
+                        shape: BoxShape.circle,
+                        border: Border.all(color: Colors.white.withOpacity(.45), width: 2),
+                      ),
+                      child: Center(
+                        child: Text(
+                          name.isNotEmpty ? name[0].toUpperCase() : '?',
+                          style: const TextStyle(color: Colors.white, fontSize: 28, fontWeight: FontWeight.w900),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 15),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text('Welcome back', style: TextStyle(color: Colors.white70, fontSize: 12, fontWeight: FontWeight.w600)),
+                          const SizedBox(height: 3),
+                          Text(name, style: const TextStyle(color: Colors.white, fontSize: 21, fontWeight: FontWeight.w900)),
+                          if (u['created_at'] != null)
+                            Text('Member since ${_date(u['created_at'])}', style: const TextStyle(color: Colors.white70, fontSize: 11.5)),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 18),
+              _Section(title: t.generalSection, children: [
+                _Tile(Icons.person_outline, t.profileLabel, () => _push(const AccountScreen())),
+                _Tile(Icons.location_on_outlined, t.myAddress, () => _push(const AddressesScreen())),
+                _Tile(Icons.translate, t.language, () => showLanguagePicker(context)),
+              ]),
+              _Section(title: t.promotionalActivitySection, children: [
+                _Tile(Icons.confirmation_number_outlined, t.coupon, () => _push(const CouponsScreen())),
+                _Tile(Icons.account_balance_wallet_outlined, t.myWallet, () => _push(const WalletScreen()), trailing: '₹${wallet.toStringAsFixed(0)}'),
+              ]),
+              _Section(title: t.earningsSection, children: [
+                _Tile(Icons.two_wheeler_outlined, t.joinAsDeliveryMan, () => _push(const DeliveryPartnerSignupScreen())),
+                _Tile(Icons.storefront_outlined, t.openVendor, () => _push(const VendorSignupScreen())),
+              ]),
+              _Section(title: t.helpSupportSection, children: [
+                _Tile(Icons.chat_bubble_outline, t.liveChat, () => _push(const ChatScreen())),
+                _Tile(Icons.headset_mic_outlined, t.helpSupport, () => _push(const HelpSupportScreen())),
+                _Tile(Icons.info_outline, t.aboutUs, () => _push(const StaticPageScreen(url: ApiConfig.pageAbout))),
+                _Tile(Icons.description_outlined, t.termsConditions, () => _push(const StaticPageScreen(url: ApiConfig.pageTerms))),
+                _Tile(Icons.privacy_tip_outlined, t.privacyPolicy, () => _push(const StaticPageScreen(url: ApiConfig.pagePrivacy))),
+                _Tile(Icons.receipt_long_outlined, t.refundPolicy, () => _push(const StaticPageScreen(url: ApiConfig.pageRefundPolicy))),
+                _Tile(Icons.local_shipping_outlined, t.shippingPolicy, () => _push(const StaticPageScreen(url: ApiConfig.pageShippingPolicy))),
+              ]),
+              _Section(title: t.ordersPaymentsSection, children: [
+                _Tile(Icons.receipt_long_outlined, t.myOrders, () => _push(const OrdersScreen())),
+                _Tile(Icons.credit_card_outlined, t.paymentMethods, () => _push(const PaymentMethodsScreen())),
+              ]),
+              const SizedBox(height: 18),
+              SizedBox(
+                height: 54,
+                child: OutlinedButton.icon(
+                  onPressed: _logout,
+                  icon: const Icon(Icons.logout_rounded),
+                  label: Text(t.logout, style: const TextStyle(fontWeight: FontWeight.w800)),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: Colors.red,
+                    side: BorderSide(color: Colors.red.withOpacity(.3)),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(17)),
+                  ),
+                ),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+}
+
+class _Section extends StatelessWidget {
+  final String title;
+  final List<Widget> children;
+  const _Section({required this.title, required this.children});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.only(left: 4, bottom: 9),
+            child: Text(title, style: TextStyle(color: AppTheme.textSecondary(context), fontSize: 12, fontWeight: FontWeight.w900, letterSpacing: .7)),
+          ),
+          Container(
+            decoration: BoxDecoration(
+              color: AppTheme.surface(context),
+              borderRadius: BorderRadius.circular(20),
+              boxShadow: [BoxShadow(color: Colors.black.withOpacity(.03), blurRadius: 14, offset: const Offset(0, 5))],
+            ),
+            child: Column(
+              children: List.generate(children.length, (i) => Column(
+                children: [
+                  children[i],
+                  if (i < children.length - 1) Divider(height: 1, indent: 68, color: AppTheme.borderColor(context).withOpacity(.45)),
+                ],
+              )),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _Tile extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+  final String? trailing;
+  const _Tile(this.icon, this.label, this.onTap, {this.trailing});
+
+  @override
+  Widget build(BuildContext context) {
+    return ListTile(
+      contentPadding: const EdgeInsets.symmetric(horizontal: 15, vertical: 3),
+      leading: Container(
+        width: 42,
+        height: 42,
+        decoration: BoxDecoration(color: AppTheme.primary.withOpacity(.07), borderRadius: BorderRadius.circular(13)),
+        child: Icon(icon, color: AppTheme.primary, size: 21),
+      ),
+      title: Text(label, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14)),
+      trailing: trailing != null
+          ? Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              decoration: BoxDecoration(color: AppTheme.primary.withOpacity(.09), borderRadius: BorderRadius.circular(12)),
+              child: Text(trailing!, style: const TextStyle(color: AppTheme.primary, fontWeight: FontWeight.w900, fontSize: 12)),
+            )
+          : const Icon(Icons.chevron_right_rounded, color: Colors.grey),
+      onTap: onTap,
+    );
+  }
+}
