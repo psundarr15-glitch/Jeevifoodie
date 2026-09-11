@@ -5,6 +5,7 @@ class OrderSummary {
   final double total;
   final String? placedAt;
   final String paymentMethod;
+  final String? imageUrl;
 
   OrderSummary({
     required this.id,
@@ -13,6 +14,7 @@ class OrderSummary {
     required this.total,
     this.placedAt,
     this.paymentMethod = 'cod',
+    this.imageUrl,
   });
 
   factory OrderSummary.fromJson(Map<String, dynamic> j) => OrderSummary(
@@ -22,6 +24,7 @@ class OrderSummary {
         total: double.tryParse(j['total']?.toString() ?? '') ?? 0,
         placedAt: j['placed_at']?.toString(),
         paymentMethod: j['payment_method']?.toString() ?? 'cod',
+        imageUrl: (j['image_url']?.toString().trim().isEmpty ?? true) ? null : j['image_url'].toString(),
       );
 }
 

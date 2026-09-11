@@ -74,10 +74,6 @@ class _OrdersScreenState extends State<OrdersScreen> with SingleTickerProviderSt
     return DateFormat('dd MMM yyyy, hh:mm a').format(parsed);
   }
 
-  IconData _foodIcon(int index) {
-    const icons = [Icons.ramen_dining_rounded, Icons.local_pizza_rounded, Icons.lunch_dining_rounded, Icons.icecream_rounded, Icons.breakfast_dining_rounded, Icons.local_cafe_rounded];
-    return icons[index % icons.length];
-  }
 
   @override
   void dispose() {
@@ -164,7 +160,6 @@ class _OrdersScreenState extends State<OrdersScreen> with SingleTickerProviderSt
                           itemCount: filtered.length,
                           itemBuilder: (context, i) => _OrderCard(
                             order: filtered[i],
-                            icon: _foodIcon(i),
                             meta: _status(filtered[i].status),
                             date: _date(filtered[i].placedAt),
                             onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => OrderTrackScreen(orderCode: filtered[i].orderCode))),
@@ -185,11 +180,10 @@ class _OrdersScreenState extends State<OrdersScreen> with SingleTickerProviderSt
 
 class _OrderCard extends StatelessWidget {
   final OrderSummary order;
-  final IconData icon;
   final _StatusMeta meta;
   final String date;
   final VoidCallback onTap;
-  const _OrderCard({required this.order, required this.icon, required this.meta, required this.date, required this.onTap});
+  const _OrderCard({required this.order, required this.meta, required this.date, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
@@ -209,7 +203,14 @@ class _OrderCard extends StatelessWidget {
                   width: 74,
                   height: 74,
                   decoration: BoxDecoration(color: meta.soft, borderRadius: BorderRadius.circular(16)),
-                  child: Icon(icon, size: 38, color: meta.color),
+                  clipBehavior: Clip.antiAlias,
+                  child: order.imageUrl != null
+                      ? Image.network(
+                          order.imageUrl!,
+                          fit: BoxFit.cover,
+                          errorBuilder: (_, __, ___) => Icon(Icons.restaurant_rounded, size: 38, color: meta.color),
+                        )
+                      : Icon(Icons.restaurant_rounded, size: 38, color: meta.color),
                 ),
                 const SizedBox(width: 14),
                 Expanded(
@@ -242,7 +243,6 @@ class _OrderCard extends StatelessWidget {
 }
 
 class _CircleButton extends StatelessWidget {
-  final IconData icon;
   final VoidCallback onTap;
   final bool soft;
   const _CircleButton({required this.icon, required this.onTap, this.soft = false});
@@ -258,6 +258,5 @@ class _StatusMeta {
   final String label;
   final Color color;
   final Color soft;
-  final IconData icon;
   const _StatusMeta(this.label, this.color, this.soft, this.icon);
 }
