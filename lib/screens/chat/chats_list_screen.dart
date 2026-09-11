@@ -68,24 +68,27 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
 
   _ChatEntry _threadEntry(Map<String, dynamic> data) {
     final isManager = data['recipientRole'] == 'manager';
+    final isDelivery = data['recipientRole'] == 'delivery';
     final ts = data['lastMessageAt'];
     return _ChatEntry(
       threadId: data['threadId'] as String,
       avatar: CircleAvatar(
-        backgroundColor: isManager ? Colors.grey.shade200 : AppTheme.primary,
+        backgroundColor: isManager || isDelivery ? Colors.grey.shade200 : AppTheme.primary,
         child: Icon(
-          isManager ? Icons.storefront : Icons.support_agent,
-          color: isManager ? Colors.grey.shade700 : Colors.white,
+          isDelivery ? Icons.delivery_dining : (isManager ? Icons.storefront : Icons.support_agent),
+          color: isManager || isDelivery ? Colors.grey.shade700 : Colors.white,
         ),
       ),
-      title: isManager ? ((data['restaurantName'] as String?) ?? 'Restaurant') : 'JEEVI Support',
-      subtitle: (data['lastMessage'] as String?) ?? '',
+      title: isDelivery ? 'Delivery Partner' : (isManager ? ((data['restaurantName'] as String?) ?? 'Restaurant') : 'JEEVI Support'),
+      subtitle: '${data['orderCode'] != null ? 'Order #${data['orderCode']} • ' : ''}${(data['lastMessage'] as String?) ?? ''}',
       time: ts is Timestamp ? ts.toDate() : null,
       unreadCount: (data['unreadForCustomer'] as num?)?.toInt() ?? 0,
       onTap: () => Navigator.of(context).push(MaterialPageRoute(
         builder: (_) => isManager
-            ? ChatScreen(restaurantId: data['restaurantId'] as int?, restaurantName: data['restaurantName'] as String?)
-            : const ChatScreen(),
+            ? ChatScreen(restaurantId: data['restaurantId'] as int?, restaurantName: data['restaurantName'] as String?, orderId: (data['orderId'] as num?)?.toInt())
+            : isDelivery
+                ? ChatScreen(orderId: (data['orderId'] as num?)?.toInt(), deliveryPartnerId: (data['deliveryPartnerId'] as num?)?.toInt())
+                : const ChatScreen(),
       )),
     );
   }

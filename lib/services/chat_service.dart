@@ -21,6 +21,7 @@ class ChatService {
   String? _restaurantName;
   int? _orderId;
   String? _orderCode;
+  int? _deliveryPartnerId;
   bool _signedIn = false;
 
   /// Must be called once before [messages]/[send] — signs this device in
@@ -30,23 +31,24 @@ class ChatService {
   /// [restaurantName] is only used to denormalize onto the thread doc (so
   /// the Chats list can show "Aachi Samayal" instead of a blank title) —
   /// pass it whenever the caller already has it (e.g. from order tracking).
-  Future<void> connect({int? restaurantId, String? restaurantName, int? orderId, String? orderCode}) async {
-    final res = await ApiClient.get(ApiConfig.chatFirebaseToken(restaurantId, orderId));
+  Future<void> connect({int? restaurantId, String? restaurantName, int? orderId, int? deliveryPartnerId}) async {
+    final res = await ApiClient.get(ApiConfig.chatFirebaseToken(restaurantId, orderId, deliveryPartnerId));
     final token = res['token'] as String;
     _threadId = res['thread_id'] as String;
     // The backend's own validated restaurant_id (null if the requested
     // one wasn't legitimate and it fell back to the admin thread) - used
     // again by sendImage() so the upload lands in the exact same
     // threadId folder as this thread, not a client-guessed one.
-    _restaurantId = res['restaurant_id'] == null ? null : int.tryParse(res['restaurant_id'].toString());
+    _restaurantId = res['restaurant_id'] != null ? int.tryParse(res['restaurant_id'].toString()) : null;
     // From the backend (not local app state) so the thread doc always
     // gets a real name/email even if the profile wasn't loaded locally —
     // this is what the admin/manager inbox list displays per thread.
     _customerName = res['customer_name'] as String?;
     _customerEmail = res['customer_email'] as String?;
     _restaurantName = restaurantName;
-    _orderId = orderId ?? (res['order_id'] == null ? null : int.tryParse(res['order_id'].toString()));
-    _orderCode = orderCode ?? res['order_code'] as String?;
+    _orderId = orderId;
+    _orderCode = res['order_code'] as String?;
+    _deliveryPartnerId = deliveryPartnerId;
 
     if (!_signedIn) {
       await FirebaseAuth.instance.signInWithCustomToken(token);
@@ -115,10 +117,9 @@ class ChatService {
       await _threadRef.update({
         'lastMessage': text,
         'lastMessageAt': FieldValue.serverTimestamp(),
-        'unreadForStaff': FieldValue.increment(1),
+        if (_threadId!.startsWith('delivery_order_')) 'unreadForDelivery': FieldValue.increment(1),
+        if (!_threadId!.startsWith('delivery_order_')) 'unreadForStaff': FieldValue.increment(1),
         'unreadForCustomer': 0,
-        if (_orderId != null) 'orderId': _orderId,
-        if (_orderCode != null) 'orderCode': _orderCode,
         // Sending a message after the chat ended naturally re-opens it —
         // no separate "reopen" step needed for the customer side.
         if (wasClosed) 'status': 'open',
@@ -130,19 +131,22 @@ class ChatService {
       // recipientRole here must match what the backend's custom-token
       // claims allow, which firestore.rules re-checks on write.
       final parts = _threadId!.split('_');
-      final isRestaurant = _threadId!.startsWith('restaurant_');
+      final isRestaurant = _threadId!.startsWith('restaurant_') || _threadId!.startsWith('order_');
+      final isDelivery = _threadId!.startsWith('delivery_order_');
       await _threadRef.set({
         'userId': int.parse(FirebaseAuth.instance.currentUser!.uid),
-        'restaurantId': isRestaurant ? int.parse(parts[1]) : null,
-        'recipientRole': isRestaurant ? 'manager' : 'admin',
+        'restaurantId': isRestaurant && !isDelivery ? _restaurantId : null,
+        'recipientRole': isDelivery ? 'delivery' : (isRestaurant ? 'manager' : 'admin'),
         'customerName': _customerName,
         'customerEmail': _customerEmail,
-        if (isRestaurant) 'restaurantName': _restaurantName,
-        if (isRestaurant && _orderId != null) 'orderId': _orderId,
-        if (isRestaurant && _orderCode != null) 'orderCode': _orderCode,
+        if (isRestaurant && !isDelivery) 'restaurantName': _restaurantName,
+        if (isDelivery) 'deliveryPartnerId': _deliveryPartnerId,
+        'orderId': _orderId,
+        'orderCode': _orderCode,
         'lastMessage': text,
         'lastMessageAt': FieldValue.serverTimestamp(),
-        'unreadForStaff': 1,
+        'unreadForStaff': isDelivery ? 0 : 1,
+        'unreadForDelivery': isDelivery ? 1 : 0,
         'unreadForCustomer': 0,
         'status': 'open',
       });
@@ -153,8 +157,6 @@ class ChatService {
       'message': text,
       'type': 'text',
       'createdAt': FieldValue.serverTimestamp(),
-      if (_orderId != null) 'orderId': _orderId,
-      if (_orderCode != null) 'orderCode': _orderCode,
     });
   }
 
@@ -179,7 +181,8 @@ class ChatService {
       await _threadRef.update({
         'lastMessage': captionText,
         'lastMessageAt': FieldValue.serverTimestamp(),
-        'unreadForStaff': FieldValue.increment(1),
+        if (_threadId!.startsWith('delivery_order_')) 'unreadForDelivery': FieldValue.increment(1),
+        if (!_threadId!.startsWith('delivery_order_')) 'unreadForStaff': FieldValue.increment(1),
         'unreadForCustomer': 0,
         if (wasClosed) 'status': 'open',
         if (wasClosed) 'closedAt': null,
@@ -187,19 +190,22 @@ class ChatService {
       });
     } else {
       final parts = _threadId!.split('_');
-      final isRestaurant = _threadId!.startsWith('restaurant_');
+      final isRestaurant = _threadId!.startsWith('restaurant_') || _threadId!.startsWith('order_');
+      final isDelivery = _threadId!.startsWith('delivery_order_');
       await _threadRef.set({
         'userId': int.parse(FirebaseAuth.instance.currentUser!.uid),
-        'restaurantId': isRestaurant ? int.parse(parts[1]) : null,
-        'recipientRole': isRestaurant ? 'manager' : 'admin',
+        'restaurantId': isRestaurant && !isDelivery ? _restaurantId : null,
+        'recipientRole': isDelivery ? 'delivery' : (isRestaurant ? 'manager' : 'admin'),
         'customerName': _customerName,
         'customerEmail': _customerEmail,
-        if (isRestaurant) 'restaurantName': _restaurantName,
-        if (isRestaurant && _orderId != null) 'orderId': _orderId,
-        if (isRestaurant && _orderCode != null) 'orderCode': _orderCode,
+        if (isRestaurant && !isDelivery) 'restaurantName': _restaurantName,
+        if (isDelivery) 'deliveryPartnerId': _deliveryPartnerId,
+        'orderId': _orderId,
+        'orderCode': _orderCode,
         'lastMessage': captionText,
         'lastMessageAt': FieldValue.serverTimestamp(),
-        'unreadForStaff': 1,
+        'unreadForStaff': isDelivery ? 0 : 1,
+        'unreadForDelivery': isDelivery ? 1 : 0,
         'unreadForCustomer': 0,
         'status': 'open',
       });
@@ -211,8 +217,6 @@ class ChatService {
       'type': 'image',
       'imageUrl': imageUrl,
       'createdAt': FieldValue.serverTimestamp(),
-      if (_orderId != null) 'orderId': _orderId,
-      if (_orderCode != null) 'orderCode': _orderCode,
     });
   }
 

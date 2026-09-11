@@ -33,7 +33,7 @@ class _OrderTrackScreenState extends State<OrderTrackScreen> {
     super.initState();
     _load();
     // Poll every 15s so status updates without the user manually refreshing.
-    _poll = Timer.periodic(const Duration(seconds: 5), (_) => _load());
+    _poll = Timer.periodic(const Duration(seconds: 10), (_) => _load());
   }
 
   void _load() {
@@ -93,25 +93,15 @@ class _OrderTrackScreenState extends State<OrderTrackScreen> {
                   ),
                 ),
               const SizedBox(height: 16),
-              if (info.deliveryOtp != null && info.deliveryOtp!.trim().isNotEmpty &&
-                  (info.deliveryOtpRequired || info.orderStatus == 'out_for_delivery')) ...[
-                Card(
-                  child: Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(children: [const Icon(Icons.lock_outline), const SizedBox(width: 8), Text('Delivery OTP', style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold))]),
-                        const SizedBox(height: 8),
-                        Text(info.deliveryOtp!, style: Theme.of(context).textTheme.headlineSmall?.copyWith(letterSpacing: 5, fontWeight: FontWeight.bold)),
-                        const SizedBox(height: 6),
-                        Text('Share this OTP with the delivery partner only when your order arrives.', style: TextStyle(color: Colors.grey.shade600, fontSize: 12.5)),
-                      ],
-                    ),
+              if (info.deliveryPartnerId != null)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 16),
+                  child: OutlinedButton.icon(
+                    onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => ChatScreen(orderId: info.orderId, deliveryPartnerId: info.deliveryPartnerId))),
+                    icon: const Icon(Icons.delivery_dining),
+                    label: const Text('Chat with Delivery Partner'),
                   ),
                 ),
-                const SizedBox(height: 16),
-              ],
               if (info.restaurantId != null)
                 Padding(
                   padding: const EdgeInsets.only(bottom: 16),
@@ -122,7 +112,6 @@ class _OrderTrackScreenState extends State<OrderTrackScreen> {
                           restaurantId: info.restaurantId,
                           restaurantName: info.restaurantName,
                           orderId: info.orderId,
-                          orderCode: widget.orderCode,
                         ),
                       ),
                     ),
@@ -260,12 +249,12 @@ class _TrackingMap extends StatelessWidget {
     return ClipRRect(
       borderRadius: BorderRadius.circular(12),
       child: SizedBox(
-        height: 220,
+        height: 150,
         child: FlutterMap(
           mapController: mapController,
           options: MapOptions(
             initialCenter: center,
-            initialZoom: 14,
+            initialZoom: 16,
             onMapReady: onReady,
             interactionOptions: const InteractionOptions(flags: InteractiveFlag.pinchZoom | InteractiveFlag.drag),
           ),

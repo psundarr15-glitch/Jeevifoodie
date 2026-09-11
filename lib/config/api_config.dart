@@ -48,10 +48,11 @@ class ApiConfig {
   // No restaurantId means the general app-admin thread; a restaurantId
   // means that restaurant's manager thread (the backend only honors a
   // restaurantId the customer actually has an order from).
-  static String chatFirebaseToken([int? restaurantId, int? orderId]) {
+  static String chatFirebaseToken([int? restaurantId, int? orderId, int? deliveryPartnerId]) {
     final params = <String>[];
     if (restaurantId != null) params.add('restaurant_id=$restaurantId');
     if (orderId != null) params.add('order_id=$orderId');
+    if (deliveryPartnerId != null) params.add('delivery_partner_id=$deliveryPartnerId');
     return '$baseUrl/customer/chat/firebase-token${params.isEmpty ? '' : '?${params.join('&')}'}';
   }
 
