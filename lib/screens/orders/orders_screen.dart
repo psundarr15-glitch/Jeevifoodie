@@ -243,6 +243,7 @@ class _OrderCard extends StatelessWidget {
 }
 
 class _CircleButton extends StatelessWidget {
+  final IconData icon;
   final VoidCallback onTap;
   final bool soft;
   const _CircleButton({required this.icon, required this.onTap, this.soft = false});
@@ -256,6 +257,7 @@ class _CircleButton extends StatelessWidget {
 
 class _StatusMeta {
   final String label;
+  final IconData icon;
   final Color color;
   final Color soft;
   const _StatusMeta(this.label, this.color, this.soft, this.icon);
