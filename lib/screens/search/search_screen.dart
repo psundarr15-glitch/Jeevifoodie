@@ -8,215 +8,28 @@ import '../../l10n/app_localizations.dart';
 import 'search_results_screen.dart';
 import 'item_detail_sheet.dart';
 
-class SearchScreen extends StatefulWidget {
-  const SearchScreen({super.key});
-  @override
-  State<SearchScreen> createState() => _SearchScreenState();
-}
-
+class SearchScreen extends StatefulWidget { const SearchScreen({super.key}); @override State<SearchScreen> createState()=>_SearchScreenState(); }
 class _SearchScreenState extends State<SearchScreen> {
-  final _controller = TextEditingController();
-  List<String> _recent = [];
-  List<Category> _categories = [];
-  List<MenuItem> _suggestions = [];
-  bool _loading = true;
-
-  @override
-  void initState() {
-    super.initState();
-    _load();
-  }
-
-  Future<void> _load() async {
-    final recent = await SearchService.recentSearches();
-    try {
-      final home = await CustomerService.home();
-      if (mounted) {
-        setState(() {
-          _recent = recent;
-          _categories = home.categories;
-          _suggestions = home.popularItems.take(6).toList();
-          _loading = false;
-        });
-      }
-    } catch (_) {
-      if (mounted) setState(() { _recent = recent; _loading = false; });
-    }
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  Future<void> _runSearch(String query) async {
-    final trimmed = query.trim();
-    if (trimmed.isEmpty) return;
-    await SearchService.addRecentSearch(trimmed);
-    if (!mounted) return;
-    await Navigator.of(context).push(MaterialPageRoute(builder: (_) => SearchResultsScreen(initialQuery: trimmed)));
-    _load();
-  }
-
-  Future<void> _clearAllRecent() async {
-    await SearchService.clearRecentSearches();
-    setState(() => _recent = []);
-  }
-
-  Future<void> _removeRecent(String query) async {
-    await SearchService.removeRecentSearch(query);
-    setState(() => _recent.remove(query));
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final t = AppLocalizations.of(context)!;
-    return Scaffold(
-      body: SafeArea(
-        child: Column(
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
-              child: TextField(
-                controller: _controller,
-                autofocus: true,
-                textInputAction: TextInputAction.search,
-                onSubmitted: _runSearch,
-                decoration: InputDecoration(
-                  hintText: t.searchHint,
-                  prefixIcon: const Icon(Icons.search),
-                  filled: true,
-                  fillColor: Colors.grey.shade100,
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(28), borderSide: BorderSide.none),
-                ),
-              ),
-            ),
-            if (_loading)
-              const Expanded(child: Center(child: CircularProgressIndicator()))
-            else
-              Expanded(
-                child: ListView(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  children: [
-                    if (_recent.isNotEmpty) ...[
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text(t.yourLastSearch, style: const TextStyle(fontSize: 17, fontWeight: FontWeight.bold)),
-                          GestureDetector(
-                            onTap: _clearAllRecent,
-                            child: Text(t.clearAll, style: const TextStyle(color: AppTheme.primary, fontWeight: FontWeight.w600)),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 8),
-                      for (final q in _recent)
-                        ListTile(
-                          contentPadding: EdgeInsets.zero,
-                          leading: const Icon(Icons.search, color: Colors.grey),
-                          title: Text(q),
-                          trailing: GestureDetector(
-                            onTap: () => _removeRecent(q),
-                            child: const Icon(Icons.close, size: 20, color: Colors.grey),
-                          ),
-                          onTap: () => _runSearch(q),
-                        ),
-                      const SizedBox(height: 16),
-                    ],
-                    if (_suggestions.isNotEmpty) ...[
-                      Text(t.suggestions, style: const TextStyle(fontSize: 17, fontWeight: FontWeight.bold)),
-                      const SizedBox(height: 10),
-                      GridView.builder(
-                        shrinkWrap: true,
-                        physics: const NeverScrollableScrollPhysics(),
-                        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: 2,
-                          mainAxisSpacing: 10,
-                          crossAxisSpacing: 10,
-                          childAspectRatio: 2.6,
-                        ),
-                        itemCount: _suggestions.length,
-                        itemBuilder: (context, i) {
-                          final item = _suggestions[i];
-                          return _SuggestionTile(
-                            item: item,
-                            onTap: () => showModalBottomSheet(
-                              context: context,
-                              isScrollControlled: true,
-                              shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
-                              builder: (_) => ItemDetailSheet(item: item),
-                            ),
-                          );
-                        },
-                      ),
-                      const SizedBox(height: 20),
-                    ],
-                    if (_categories.isNotEmpty) ...[
-                      Text(t.popularCategories, style: const TextStyle(fontSize: 17, fontWeight: FontWeight.bold)),
-                      const SizedBox(height: 10),
-                      Wrap(
-                        spacing: 10,
-                        runSpacing: 10,
-                        children: _categories.map((c) {
-                          return GestureDetector(
-                            onTap: () => _runSearch(c.displayName(context)),
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
-                              decoration: BoxDecoration(color: Colors.grey.shade200, borderRadius: BorderRadius.circular(24)),
-                              child: Text(c.displayName(context), style: const TextStyle(fontWeight: FontWeight.w600)),
-                            ),
-                          );
-                        }).toList(),
-                      ),
-                      const SizedBox(height: 20),
-                    ],
-                  ],
-                ),
-              ),
-          ],
-        ),
-      ),
-    );
-  }
+  final _controller=TextEditingController(); List<String> _recent=[]; List<Category> _categories=[]; List<MenuItem> _suggestions=[]; bool _loading=true;
+  @override void initState(){super.initState(); _load();}
+  Future<void> _load() async { final recent=await SearchService.recentSearches(); try { final home=await CustomerService.home(); if(mounted)setState((){_recent=recent;_categories=home.categories;_suggestions=home.popularItems.take(6).toList();_loading=false;}); } catch(_){if(mounted)setState((){_recent=recent;_loading=false;});} }
+  @override void dispose(){_controller.dispose();super.dispose();}
+  Future<void> _runSearch(String q) async {final s=q.trim();if(s.isEmpty)return;await SearchService.addRecentSearch(s);if(!mounted)return;await Navigator.of(context).push(MaterialPageRoute(builder:(_)=>SearchResultsScreen(initialQuery:s)));_load();}
+  Future<void> _clear() async {await SearchService.clearRecentSearches();if(mounted)setState(()=>_recent=[]);}
+  Future<void> _remove(String q) async {await SearchService.removeRecentSearch(q);if(mounted)setState(()=>_recent.remove(q));}
+  @override Widget build(BuildContext context){final t=AppLocalizations.of(context)!;return Scaffold(backgroundColor:AppTheme.scaffoldBg(context),body:SafeArea(child:Column(children:[
+    Padding(padding:const EdgeInsets.fromLTRB(18,10,18,12),child:Row(children:[
+      Material(color:AppTheme.surface(context),shape:const CircleBorder(),child:InkWell(onTap:()=>Navigator.pop(context),customBorder:const CircleBorder(),child:const SizedBox(width:44,height:44,child:Icon(Icons.arrow_back_rounded)))),
+      const SizedBox(width:12),Expanded(child:Container(height:48,decoration:BoxDecoration(color:AppTheme.surface(context),borderRadius:BorderRadius.circular(16),boxShadow:[BoxShadow(color:Colors.black.withOpacity(.05),blurRadius:16,offset:const Offset(0,6))]),child:TextField(controller:_controller,autofocus:true,textInputAction:TextInputAction.search,onSubmitted:_runSearch,decoration:InputDecoration(hintText:t.searchHint,prefixIcon:const Icon(Icons.search_rounded),suffixIcon:_controller.text.isEmpty?null:IconButton(icon:const Icon(Icons.close_rounded),onPressed:(){_controller.clear();setState((){});}),border:InputBorder.none,contentPadding:const EdgeInsets.symmetric(vertical:14))))),
+    ])),
+    Expanded(child:_loading?const Center(child:CircularProgressIndicator()):ListView(padding:const EdgeInsets.fromLTRB(18,8,18,28),children:[
+      if(_recent.isNotEmpty)_Section(title:t.yourLastSearch,action:t.clearAll,onAction:_clear,child:Wrap(spacing:8,runSpacing:8,children:_recent.map((q)=>_Pill(label:q,onTap:()=>_runSearch(q),onRemove:()=>_remove(q))).toList())),
+      if(_suggestions.isNotEmpty)_Section(title:t.suggestions,child:GridView.builder(shrinkWrap:true,physics:const NeverScrollableScrollPhysics(),gridDelegate:const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount:2,crossAxisSpacing:12,mainAxisSpacing:12,childAspectRatio:1.55),itemCount:_suggestions.length,itemBuilder:(c,i){final item=_suggestions[i];return _FoodSuggestion(item:item,onTap:()=>showModalBottomSheet(context:context,isScrollControlled:true,backgroundColor:Colors.transparent,builder:(_)=>ItemDetailSheet(item:item)));})),
+      if(_categories.isNotEmpty)_Section(title:t.popularCategories,child:Wrap(spacing:10,runSpacing:10,children:_categories.map((c)=>GestureDetector(onTap:()=>_runSearch(c.displayName(context)),child:Container(padding:const EdgeInsets.symmetric(horizontal:15,vertical:11),decoration:BoxDecoration(color:AppTheme.surface(context),borderRadius:BorderRadius.circular(14),border:Border.all(color:AppTheme.borderColor(context))),child:Text(c.displayName(context),style:const TextStyle(fontWeight:FontWeight.w700))))).toList()))
+    ]))
+  ])));}
 }
-
-class _SuggestionTile extends StatelessWidget {
-  final MenuItem item;
-  final VoidCallback onTap;
-  const _SuggestionTile({required this.item, required this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    const fallbackImage = 'https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=200&h=200&fit=crop';
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        decoration: BoxDecoration(
-          color: AppTheme.surface(context),
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: AppTheme.borderColor(context)),
-        ),
-        padding: const EdgeInsets.all(8),
-        child: Row(
-          children: [
-            ClipRRect(
-              borderRadius: BorderRadius.circular(8),
-              child: Image.network(
-                item.image?.isNotEmpty == true ? item.image! : fallbackImage,
-                width: 48,
-                height: 48,
-                fit: BoxFit.cover,
-                errorBuilder: (_, __, ___) => Image.network(fallbackImage, width: 48, height: 48, fit: BoxFit.cover),
-              ),
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Text(item.name, maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.w600)),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
+class _Section extends StatelessWidget{final String title;final String? action;final VoidCallback? onAction;final Widget child;const _Section({required this.title,required this.child,this.action,this.onAction});@override Widget build(BuildContext c)=>Padding(padding:const EdgeInsets.only(top:12,bottom:12),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Row(children:[Expanded(child:Text(title,style:const TextStyle(fontSize:20,fontWeight:FontWeight.w900))),if(action!=null)TextButton(onPressed:onAction,child:Text(action!,style:const TextStyle(fontWeight:FontWeight.w800)))]),const SizedBox(height:12),child]));}
+class _Pill extends StatelessWidget{final String label;final VoidCallback onTap;final VoidCallback onRemove;const _Pill({required this.label,required this.onTap,required this.onRemove});@override Widget build(BuildContext c)=>Material(color:AppTheme.surface(c),borderRadius:BorderRadius.circular(14),child:InkWell(onTap:onTap,borderRadius:BorderRadius.circular(14),child:Padding(padding:const EdgeInsets.fromLTRB(14,10,8,10),child:Row(mainAxisSize:MainAxisSize.min,children:[const Icon(Icons.history_rounded,size:16),const SizedBox(width:7),Text(label,style:const TextStyle(fontWeight:FontWeight.w600)),const SizedBox(width:5),GestureDetector(onTap:onRemove,child:const Icon(Icons.close_rounded,size:16))]))));}
+class _FoodSuggestion extends StatelessWidget{final MenuItem item;final VoidCallback onTap;const _FoodSuggestion({required this.item,required this.onTap});@override Widget build(BuildContext c){final image=item.image;return Material(color:AppTheme.surface(c),borderRadius:BorderRadius.circular(18),child:InkWell(onTap:onTap,borderRadius:BorderRadius.circular(18),child:Padding(padding:const EdgeInsets.all(9),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Expanded(child:ClipRRect(borderRadius:BorderRadius.circular(14),child:image!=null&&image.isNotEmpty?Image.network(image,fit:BoxFit.cover,width:double.infinity,errorBuilder:(_,__,___)=>_FoodIcon()):_FoodIcon())),const SizedBox(height:8),Text(item.name,maxLines:1,overflow:TextOverflow.ellipsis,style:const TextStyle(fontWeight:FontWeight.w800,fontSize:13))]))));}}
+class _FoodIcon extends StatelessWidget{const _FoodIcon();@override Widget build(BuildContext c)=>Container(color:AppTheme.primary.withOpacity(.08),child:const Center(child:Icon(Icons.restaurant_rounded,size:30,color:AppTheme.primary)));}

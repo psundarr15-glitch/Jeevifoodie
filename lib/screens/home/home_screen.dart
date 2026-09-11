@@ -52,7 +52,7 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppTheme.surface(context),
+      backgroundColor: AppTheme.scaffoldBg(context),
       body: RefreshIndicator(
         color: AppTheme.primary,
         onRefresh: _refresh,

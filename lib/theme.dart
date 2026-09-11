@@ -1,157 +1,150 @@
 import 'package:flutter/material.dart';
 
-/// Jeevi Foodie design system.  The visual language is intentionally shared
-/// across the customer, restaurant and delivery apps: warm neutral canvas,
-/// white elevated surfaces, bold typography, soft 16-22px radii and a red
-/// action color.  Individual apps only differ in navigation/content.
+/// Colors matched to the "Jeevi Foodie" red/yellow/white logo: a strong
+/// appetizing red as the primary brand color, gold/yellow for CTA
+/// accents and badges (splash, "ORDER NOW", ratings), white for cards
+/// and surfaces.
+///
+/// Universal status colors elsewhere in the app (veg = green dot,
+/// non-veg = red dot, wallet credit = green / debit = red, completed
+/// order step = green check) are intentionally left as-is - those are
+/// standard conventions users already recognize, not brand color, so
+/// changing them to fit a red/yellow/white palette would make the app
+/// harder to read rather than more on-brand.
 class AppTheme {
-  static const primary = Color(0xFFF22549);
-  static const primaryDark = Color(0xFFC91436);
-  static const gold = Color(0xFFF7A600);
-  static const success = Color(0xFF12A968);
-  static const canvas = Color(0xFFF8F7F4);
-  static const ink = Color(0xFF172033);
-  static const muted = Color(0xFF697386);
-  static const line = Color(0xFFE8E9ED);
-  static const softRed = Color(0xFFFFEEF1);
-  static const softGreen = Color(0xFFE9FAF2);
-  static const softOrange = Color(0xFFFFF3E1);
+  static const primary = Color(0xFFD6291B); // brand red
+  static const primaryDark = Color(0xFF8E1610); // deep red/maroon
+  static const gold = Color(0xFFF7B500); // CTA accent on dark/red backgrounds
+  static const success = Color(0xFFD6291B); // rating badges / accent text on white cards
 
-  static const cardShadow = [
-    BoxShadow(color: Color(0x120E1726), blurRadius: 18, offset: Offset(0, 6)),
-  ];
-
+  /// Semantic helpers so screens don't hardcode "white card" / "black87
+  /// text" and then silently break under dark mode - use these instead
+  /// of Colors.white/Colors.black87 for anything that's a general
+  /// surface or body text (NOT for text/icons sitting permanently on
+  /// top of AppTheme.primary or another fixed-color banner, which should
+  /// stay white in both themes).
   static Color surface(BuildContext context) =>
-      Theme.of(context).brightness == Brightness.dark ? const Color(0xFF211D1E) : Colors.white;
+      Theme.of(context).brightness == Brightness.dark ? const Color(0xFF1E1B1A) : Colors.white;
   static Color scaffoldBg(BuildContext context) => Theme.of(context).scaffoldBackgroundColor;
   static Color textPrimary(BuildContext context) =>
-      Theme.of(context).brightness == Brightness.dark ? Colors.white : ink;
+      Theme.of(context).brightness == Brightness.dark ? Colors.white : Colors.black87;
   static Color textSecondary(BuildContext context) =>
-      Theme.of(context).brightness == Brightness.dark ? Colors.grey.shade400 : muted;
+      Theme.of(context).brightness == Brightness.dark ? Colors.grey.shade400 : Colors.grey.shade600;
   static Color borderColor(BuildContext context) =>
-      Theme.of(context).brightness == Brightness.dark ? Colors.grey.shade700 : line;
+      Theme.of(context).brightness == Brightness.dark ? Colors.grey.shade700 : Colors.grey.shade300;
 
   static ThemeData light() {
-    final scheme = ColorScheme.fromSeed(seedColor: primary, primary: primary, brightness: Brightness.light);
     return ThemeData(
       useMaterial3: true,
-      colorScheme: scheme,
-      scaffoldBackgroundColor: canvas,
-      fontFamily: 'Roboto',
-      visualDensity: VisualDensity.standard,
+      colorScheme: ColorScheme.fromSeed(seedColor: primary, primary: primary),
+      scaffoldBackgroundColor: const Color(0xFFF7F7F5),
       appBarTheme: const AppBarTheme(
-        backgroundColor: canvas,
-        foregroundColor: ink,
-        elevation: 0,
-        scrolledUnderElevation: 0,
-        centerTitle: false,
-        titleTextStyle: TextStyle(fontSize: 24, fontWeight: FontWeight.w800, color: ink, letterSpacing: -0.5),
-      ),
-      textTheme: const TextTheme(
-        headlineLarge: TextStyle(fontSize: 30, fontWeight: FontWeight.w800, color: ink, letterSpacing: -0.8),
-        headlineMedium: TextStyle(fontSize: 25, fontWeight: FontWeight.w800, color: ink, letterSpacing: -0.5),
-        titleLarge: TextStyle(fontSize: 20, fontWeight: FontWeight.w800, color: ink),
-        titleMedium: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: ink),
-        bodyLarge: TextStyle(fontSize: 15, color: ink),
-        bodyMedium: TextStyle(fontSize: 14, color: muted),
-        labelLarge: TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
-      ),
-      cardTheme: CardThemeData(
-        color: Colors.white,
-        elevation: 0,
-        margin: EdgeInsets.zero,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-      ),
-      dividerTheme: const DividerThemeData(color: line, thickness: 1, space: 1),
-      chipTheme: ChipThemeData(
         backgroundColor: Colors.white,
-        selectedColor: softRed,
-        disabledColor: line,
-        side: const BorderSide(color: line),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-        labelStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: ink),
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-      ),
-      tabBarTheme: const TabBarThemeData(
-        dividerColor: Colors.transparent,
-        indicatorSize: TabBarIndicatorSize.tab,
-        labelColor: primary,
-        unselectedLabelColor: muted,
-        labelStyle: TextStyle(fontSize: 14, fontWeight: FontWeight.w800),
-        unselectedLabelStyle: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
-      ),
-      inputDecorationTheme: InputDecorationTheme(
-        filled: true,
-        fillColor: Colors.white,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 17, vertical: 15),
-        hintStyle: const TextStyle(color: muted, fontSize: 14),
-        labelStyle: const TextStyle(color: muted),
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: line)),
-        enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: line)),
-        focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: primary, width: 1.5)),
+        foregroundColor: Colors.black,
+        elevation: 0,
+        centerTitle: false,
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
           backgroundColor: primary,
           foregroundColor: Colors.white,
-          minimumSize: const Size.fromHeight(52),
-          elevation: 0,
-          padding: const EdgeInsets.symmetric(horizontal: 20),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          textStyle: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800),
+          padding: const EdgeInsets.symmetric(vertical: 16),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
         ),
       ),
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
           foregroundColor: primary,
-          minimumSize: const Size.fromHeight(50),
-          side: const BorderSide(color: primary, width: 1.2),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          textStyle: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800),
+          side: const BorderSide(color: primary),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
         ),
       ),
-      iconButtonTheme: IconButtonThemeData(style: IconButton.styleFrom(minimumSize: const Size(44, 44), tapTargetSize: MaterialTapTargetSize.padded)),
-      floatingActionButtonTheme: const FloatingActionButtonThemeData(backgroundColor: primary, foregroundColor: Colors.white, elevation: 4),
-      dialogTheme: DialogThemeData(backgroundColor: Colors.white, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24))),
-      bottomSheetTheme: const BottomSheetThemeData(backgroundColor: Colors.white, modalBackgroundColor: Colors.white, showDragHandle: true),
-      snackBarTheme: SnackBarThemeData(behavior: SnackBarBehavior.floating, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14))),
-      progressIndicatorTheme: const ProgressIndicatorThemeData(color: primary),
-      navigationBarTheme: NavigationBarThemeData(
-        height: 78,
-        backgroundColor: Colors.white,
+      inputDecorationTheme: InputDecorationTheme(
+        filled: true,
+        fillColor: Colors.white,
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(14),
+          borderSide: const BorderSide(color: Color(0xFFDDDDDD)),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(14),
+          borderSide: const BorderSide(color: primary, width: 1.4),
+        ),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      ),
+      cardTheme: CardThemeData(
         elevation: 0,
-        shadowColor: Colors.black12,
-        indicatorColor: softRed,
-        labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
-        labelTextStyle: WidgetStateProperty.resolveWith((states) => TextStyle(
-          fontSize: 11,
-          fontWeight: states.contains(WidgetState.selected) ? FontWeight.w800 : FontWeight.w600,
-          color: states.contains(WidgetState.selected) ? primary : muted,
-        )),
-        iconTheme: WidgetStateProperty.resolveWith((states) => IconThemeData(
-          size: 24,
-          color: states.contains(WidgetState.selected) ? primary : muted,
-        )),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+        color: Colors.white,
+      ),
+      navigationBarTheme: NavigationBarThemeData(
+        backgroundColor: Colors.white,
+        indicatorColor: primary.withOpacity(0.12),
+        labelTextStyle: WidgetStateProperty.resolveWith(
+          (states) => TextStyle(
+            fontSize: 11,
+            fontWeight: states.contains(WidgetState.selected) ? FontWeight.bold : FontWeight.normal,
+            color: states.contains(WidgetState.selected) ? primary : Colors.grey.shade600,
+          ),
+        ),
+        iconTheme: WidgetStateProperty.resolveWith(
+          (states) => IconThemeData(color: states.contains(WidgetState.selected) ? primary : Colors.grey.shade600),
+        ),
       ),
     );
   }
 
+  /// Same brand red as an accent on a dark surface, following Material 3's
+  /// standard dark palette otherwise - so cards/inputs/nav still contrast
+  /// correctly without hand-tuning every color like [light] does.
   static ThemeData dark() {
-    return ThemeData.dark(useMaterial3: true).copyWith(
+    return ThemeData(
+      useMaterial3: true,
+      brightness: Brightness.dark,
+      scaffoldBackgroundColor: const Color(0xFF141110),
       colorScheme: ColorScheme.fromSeed(seedColor: primary, primary: primary, brightness: Brightness.dark),
-      scaffoldBackgroundColor: const Color(0xFF141213),
-      appBarTheme: const AppBarTheme(backgroundColor: Color(0xFF141213), elevation: 0, scrolledUnderElevation: 0),
-      cardTheme: CardThemeData(color: const Color(0xFF211D1E), elevation: 0, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20))),
+      appBarTheme: const AppBarTheme(elevation: 0, centerTitle: false),
+      elevatedButtonTheme: ElevatedButtonThemeData(
+        style: ElevatedButton.styleFrom(
+          backgroundColor: primary,
+          foregroundColor: Colors.white,
+          padding: const EdgeInsets.symmetric(vertical: 14),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        ),
+      ),
+      outlinedButtonTheme: OutlinedButtonThemeData(
+        style: OutlinedButton.styleFrom(
+          foregroundColor: primary,
+          side: const BorderSide(color: primary),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+        ),
+      ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
-        fillColor: const Color(0xFF211D1E),
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
-        enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: Color(0xFF3A3536))),
-        focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: primary, width: 1.5)),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 17, vertical: 15),
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(14),
+          borderSide: const BorderSide(color: primary, width: 1.4),
+        ),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       ),
-      elevatedButtonTheme: ElevatedButtonThemeData(style: ElevatedButton.styleFrom(backgroundColor: primary, foregroundColor: Colors.white, minimumSize: const Size.fromHeight(52), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)))),
-      navigationBarTheme: const NavigationBarThemeData(height: 78, backgroundColor: Color(0xFF211D1E), indicatorColor: Color(0x33F22549)),
+      cardTheme: CardThemeData(
+        elevation: 0,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      ),
+      navigationBarTheme: NavigationBarThemeData(
+        indicatorColor: primary.withOpacity(0.25),
+        labelTextStyle: WidgetStateProperty.resolveWith(
+          (states) => TextStyle(
+            fontSize: 11,
+            fontWeight: states.contains(WidgetState.selected) ? FontWeight.bold : FontWeight.normal,
+            color: states.contains(WidgetState.selected) ? primary : Colors.grey.shade400,
+          ),
+        ),
+        iconTheme: WidgetStateProperty.resolveWith(
+          (states) => IconThemeData(color: states.contains(WidgetState.selected) ? primary : Colors.grey.shade400),
+        ),
+      ),
     );
   }
 }
