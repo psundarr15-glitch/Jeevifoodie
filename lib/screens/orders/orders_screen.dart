@@ -5,9 +5,120 @@ import '../../theme.dart';
 import 'order_track_screen.dart';
 import '../../l10n/app_localizations.dart';
 
-class OrdersScreen extends StatefulWidget{const OrdersScreen({super.key});@override State<OrdersScreen> createState()=>_OrdersScreenState();}
-class _OrdersScreenState extends State<OrdersScreen> with SingleTickerProviderStateMixin{late Future<List<OrderSummary>> _future;late final TabController _tabs=TabController(length:4,vsync:this);static const keys=['All','Ongoing','Completed','Cancelled'];@override void initState(){super.initState();_future=OrderService.myOrders();}Future<void> _refresh()async{setState(()=>_future=OrderService.myOrders());await _future;}@override void dispose(){_tabs.dispose();super.dispose();}
-String _label(String k){final t=AppLocalizations.of(context)!;switch(k){case'Ongoing':return t.tabOngoing;case'Completed':return t.tabCompleted;case'Cancelled':return t.tabCancelled;default:return t.tabAll;}}bool _match(String s,String k){switch(k){case'Ongoing':return s!='delivered'&&s!='cancelled';case'Completed':return s=='delivered';case'Cancelled':return s=='cancelled';default:return true;}}Color _color(String s){if(s=='delivered')return Colors.green;if(s=='cancelled')return Colors.red;return AppTheme.gold;}
-@override Widget build(BuildContext c){final t=AppLocalizations.of(c)!;return Scaffold(backgroundColor:AppTheme.scaffoldBg(c),appBar:AppBar(title:Text(t.myOrdersTitle,style:const TextStyle(fontWeight:FontWeight.w900)),backgroundColor:Colors.transparent,bottom:PreferredSize(preferredSize:const Size.fromHeight(58),child:Align(alignment:Alignment.centerLeft,child:TabBar(controller:_tabs,isScrollable:true,dividerColor:Colors.transparent,indicatorSize:TabBarIndicatorSize.tab,indicatorPadding:const EdgeInsets.symmetric(vertical:8,horizontal:4),labelColor:Colors.white,unselectedLabelColor:AppTheme.textSecondary(c),indicator:BoxDecoration(color:AppTheme.primary,borderRadius:BorderRadius.circular(14)),tabs:keys.map((k)=>Padding(padding:const EdgeInsets.symmetric(horizontal:10),child:Tab(text:_label(k)))).toList())))),body:RefreshIndicator(onRefresh:_refresh,color:AppTheme.primary,child:FutureBuilder<List<OrderSummary>>(future:_future,builder:(c,s){if(s.connectionState!=ConnectionState.done)return const Center(child:CircularProgressIndicator());if(s.hasError)return ListView(children:[const SizedBox(height:100),Center(child:Text('Unable to load orders'))]);final orders=s.data??[];return TabBarView(controller:_tabs,children:keys.map((k){final list=orders.where((o)=>_match(o.status,k)).toList();if(list.isEmpty)return ListView(children:[const SizedBox(height:110),Center(child:Icon(Icons.receipt_long_outlined,size:46,color:Colors.grey)),const SizedBox(height:12),Center(child:Text(t.noOrdersHereYet,style:const TextStyle(fontWeight:FontWeight.w700)))]);return ListView.builder(padding:const EdgeInsets.fromLTRB(18,16,18,30),itemCount:list.length,itemBuilder:(c,i)=>_OrderCard(order:list[i],color:_color(list[i].status),onTap:()=>Navigator.of(c).push(MaterialPageRoute(builder:(_)=>OrderTrackScreen(orderCode:list[i].orderCode))));}).toList());}));}
+class OrdersScreen extends StatefulWidget {
+  const OrdersScreen({super.key});
+  @override State<OrdersScreen> createState() => _OrdersScreenState();
 }
-class _OrderCard extends StatelessWidget{final OrderSummary order;final Color color;final VoidCallback onTap;const _OrderCard({required this.order,required this.color,required this.onTap});@override Widget build(BuildContext c){final status=order.status.replaceAll('_',' ');return Container(margin:const EdgeInsets.only(bottom:14),decoration:BoxDecoration(color:AppTheme.surface(c),borderRadius:BorderRadius.circular(22),boxShadow:[BoxShadow(color:Colors.black.withOpacity(.045),blurRadius:18,offset:const Offset(0,7))]),child:Material(color:Colors.transparent,child:InkWell(onTap:onTap,borderRadius:BorderRadius.circular(22),child:Padding(padding:const EdgeInsets.all(15),child:Row(children:[Container(width:68,height:68,decoration:BoxDecoration(color:AppTheme.primary.withOpacity(.08),borderRadius:BorderRadius.circular(17)),child:const Icon(Icons.restaurant_rounded,color:AppTheme.primary,size:30)),const SizedBox(width:14),Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text('#${order.orderCode}',style:const TextStyle(fontSize:16,fontWeight:FontWeight.w900)),const SizedBox(height:5),Text('₹${order.total.toStringAsFixed(0)}  •  ${order.paymentMethod.toUpperCase()}',style:TextStyle(color:AppTheme.textSecondary(c),fontSize:12.5)),const SizedBox(height:9),Container(padding:const EdgeInsets.symmetric(horizontal:9,vertical:5),decoration:BoxDecoration(color:color.withOpacity(.12),borderRadius:BorderRadius.circular(20)),child:Text(status.toUpperCase(),style:TextStyle(color:color,fontSize:10.5,fontWeight:FontWeight.w900,letterSpacing:.3)))])),const Icon(Icons.chevron_right_rounded,size:28)]))));}}
+
+class _OrdersScreenState extends State<OrdersScreen> with SingleTickerProviderStateMixin {
+  late Future<List<OrderSummary>> _future;
+  late final TabController _tabs = TabController(length: 4, vsync: this);
+  static const keys = ['All', 'Ongoing', 'Completed', 'Cancelled'];
+
+  @override void initState() { super.initState(); _future = OrderService.myOrders(); }
+  Future<void> _refresh() async { setState(() => _future = OrderService.myOrders()); await _future; }
+  @override void dispose() { _tabs.dispose(); super.dispose(); }
+
+  String _label(String k) {
+    final t = AppLocalizations.of(context)!;
+    switch (k) { case 'Ongoing': return t.tabOngoing; case 'Completed': return t.tabCompleted; case 'Cancelled': return t.tabCancelled; default: return t.tabAll; }
+  }
+  bool _match(String s, String k) {
+    switch (k) { case 'Ongoing': return s != 'delivered' && s != 'cancelled'; case 'Completed': return s == 'delivered'; case 'Cancelled': return s == 'cancelled'; default: return true; }
+  }
+  Color _color(String s) { if (s == 'delivered') return Colors.green; if (s == 'cancelled') return Colors.red; return AppTheme.gold; }
+
+  @override
+  Widget build(BuildContext c) {
+    final t = AppLocalizations.of(c)!;
+    return Scaffold(
+      backgroundColor: AppTheme.scaffoldBg(c),
+      appBar: AppBar(
+        title: Text(t.myOrdersTitle, style: const TextStyle(fontWeight: FontWeight.w900)),
+        backgroundColor: Colors.transparent,
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(58),
+          child: Align(
+            alignment: Alignment.centerLeft,
+            child: TabBar(
+              controller: _tabs, isScrollable: true, dividerColor: Colors.transparent,
+              indicatorSize: TabBarIndicatorSize.tab,
+              indicatorPadding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+              labelColor: Colors.white, unselectedLabelColor: AppTheme.textSecondary(c),
+              indicator: BoxDecoration(color: AppTheme.primary, borderRadius: BorderRadius.circular(14)),
+              tabs: keys.map((k) => Padding(padding: const EdgeInsets.symmetric(horizontal: 10), child: Tab(text: _label(k)))).toList(),
+            ),
+          ),
+        ),
+      ),
+      body: RefreshIndicator(
+        onRefresh: _refresh,
+        color: AppTheme.primary,
+        child: FutureBuilder<List<OrderSummary>>(
+          future: _future,
+          builder: (c, s) {
+            if (s.connectionState != ConnectionState.done) return const Center(child: CircularProgressIndicator());
+            if (s.hasError) return ListView(children: const [SizedBox(height: 100), Center(child: Text('Unable to load orders'))]);
+            final orders = s.data ?? [];
+            return TabBarView(
+              controller: _tabs,
+              children: keys.map((k) {
+                final list = orders.where((o) => _match(o.status, k)).toList();
+                if (list.isEmpty) return ListView(children: [const SizedBox(height: 110), const Center(child: Icon(Icons.receipt_long_outlined, size: 46, color: Colors.grey)), const SizedBox(height: 12), Center(child: Text(t.noOrdersHereYet, style: const TextStyle(fontWeight: FontWeight.w700)))]);
+                return ListView.builder(
+                  padding: const EdgeInsets.fromLTRB(18, 16, 18, 30),
+                  itemCount: list.length,
+                  itemBuilder: (c, i) => _OrderCard(
+                    order: list[i], color: _color(list[i].status),
+                    onTap: () => Navigator.of(c).push(MaterialPageRoute(builder: (_) => OrderTrackScreen(orderCode: list[i].orderCode))),
+                  ),
+                );
+              }).toList(),
+            );
+          },
+        ),
+      ),
+    );
+  }
+}
+
+class _OrderCard extends StatelessWidget {
+  final OrderSummary order;
+  final Color color;
+  final VoidCallback onTap;
+  const _OrderCard({required this.order, required this.color, required this.onTap});
+
+  @override
+  Widget build(BuildContext c) {
+    final status = order.status.replaceAll('_', ' ');
+    return Container(
+      margin: const EdgeInsets.only(bottom: 14),
+      decoration: BoxDecoration(color: AppTheme.surface(c), borderRadius: BorderRadius.circular(22), boxShadow: [BoxShadow(color: Colors.black.withOpacity(.045), blurRadius: 18, offset: const Offset(0, 7))]),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap, borderRadius: BorderRadius.circular(22),
+          child: Padding(
+            padding: const EdgeInsets.all(15),
+            child: Row(
+              children: [
+                Container(width: 68, height: 68, decoration: BoxDecoration(color: AppTheme.primary.withOpacity(.08), borderRadius: BorderRadius.circular(17)), child: const Icon(Icons.restaurant_rounded, color: AppTheme.primary, size: 30)),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    Text('#${order.orderCode}', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w900)),
+                    const SizedBox(height: 5),
+                    Text('₹${order.total.toStringAsFixed(0)}  •  ${order.paymentMethod.toUpperCase()}', style: TextStyle(color: AppTheme.textSecondary(c), fontSize: 12.5)),
+                    const SizedBox(height: 9),
+                    Container(padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5), decoration: BoxDecoration(color: color.withOpacity(.12), borderRadius: BorderRadius.circular(20)), child: Text(status.toUpperCase(), style: TextStyle(color: color, fontSize: 10.5, fontWeight: FontWeight.w900, letterSpacing: .3))),
+                  ]),
+                ),
+                const Icon(Icons.chevron_right_rounded, size: 28),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
