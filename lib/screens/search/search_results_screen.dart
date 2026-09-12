@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../../models/menu_item.dart';
 import '../../models/restaurant.dart';
 import '../../services/search_service.dart';
