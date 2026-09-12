@@ -134,28 +134,98 @@ class _SearchResultsScreenState extends State<SearchResultsScreen> with SingleTi
   }
 }
 
-class _ItemsTab extends StatelessWidget {
+class _ItemsTab extends StatefulWidget {
   final List<MenuItem> items;
   const _ItemsTab({required this.items});
 
   @override
+  State<_ItemsTab> createState() => _ItemsTabState();
+}
+
+class _ItemsTabState extends State<_ItemsTab> {
+  // Cart quantity is kept at the tab level, not inside each ListView item.
+  // ListView.builder is allowed to dispose off-screen children; keeping the
+  // quantity here prevents an item's +/- state from disappearing after scroll.
+  final Map<int, int> _cartQtyByItem = <int, int>{};
+  bool _cartLoaded = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadCartState();
+  }
+
+  Future<void> _loadCartState() async {
+    try {
+      final cart = await CartService.view();
+      final quantities = <int, int>{};
+      for (final cartItem in cart.items) {
+        final id = cartItem.menuItemId;
+        if (id != null && cartItem.quantity > 0) {
+          quantities[id] = cartItem.quantity;
+        }
+      }
+      if (!mounted) return;
+      setState(() {
+        _cartQtyByItem
+          ..clear()
+          ..addAll(quantities);
+        _cartLoaded = true;
+      });
+    } catch (_) {
+      if (mounted) setState(() => _cartLoaded = true);
+    }
+  }
+
+  void _setCartQty(int itemId, int quantity) {
+    if (!mounted) return;
+    setState(() {
+      if (quantity <= 0) {
+        _cartQtyByItem.remove(itemId);
+      } else {
+        _cartQtyByItem[itemId] = quantity;
+      }
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
     final t = AppLocalizations.of(context)!;
-    if (items.isEmpty) {
+    if (widget.items.isEmpty) {
       return Center(child: Text(t.noResultsFound, style: TextStyle(color: Colors.grey.shade600)));
     }
     return ListView.separated(
       padding: const EdgeInsets.all(16),
-      itemCount: items.length,
+      itemCount: widget.items.length,
       separatorBuilder: (_, __) => const SizedBox(height: 14),
-      itemBuilder: (context, i) => _ItemCard(item: items[i]),
+      itemBuilder: (context, i) {
+        final item = widget.items[i];
+        return _ItemCard(
+          key: ValueKey<int>(item.id),
+          item: item,
+          cartQty: _cartQtyByItem[item.id] ?? 0,
+          cartStateReady: _cartLoaded,
+          onCartQtyChanged: (qty) => _setCartQty(item.id, qty),
+        );
+      },
     );
   }
 }
 
 class _ItemCard extends StatefulWidget {
   final MenuItem item;
-  const _ItemCard({required this.item});
+  final int cartQty;
+  final bool cartStateReady;
+  final ValueChanged<int> onCartQtyChanged;
+
+  const _ItemCard({
+    super.key,
+    required this.item,
+    required this.cartQty,
+    required this.cartStateReady,
+    required this.onCartQtyChanged,
+  });
+
   @override
   State<_ItemCard> createState() => _ItemCardState();
 }
@@ -163,9 +233,7 @@ class _ItemCard extends StatefulWidget {
 class _ItemCardState extends State<_ItemCard> {
   late bool _liked = widget.item.likedByMe;
   bool _toggling = false;
-  bool _addedToCart = false;
   bool _addingToCart = false;
-  int _cartQty = 1;
 
   Future<void> _addOneToCart() async {
     if (_addingToCart || !widget.item.isAvailable) return;
@@ -174,10 +242,7 @@ class _ItemCardState extends State<_ItemCard> {
       await CartService.add(menuItemId: widget.item.id, quantity: 1);
       if (!mounted) return;
       await context.read<AppState>().refreshCartCount();
-      setState(() {
-        _addedToCart = true;
-        _cartQty = 1;
-      });
+      widget.onCartQtyChanged(widget.cartQty > 0 ? widget.cartQty + 1 : 1);
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -191,14 +256,15 @@ class _ItemCardState extends State<_ItemCard> {
 
   Future<void> _changeCartQty(int delta) async {
     if (_addingToCart) return;
-    final next = _cartQty + delta;
-    if (next < 1) return;
+    final current = widget.cartQty;
+    final next = current + delta;
+    if (current <= 0 || next < 1) return;
     setState(() => _addingToCart = true);
     try {
       await CartService.add(menuItemId: widget.item.id, quantity: delta);
       if (!mounted) return;
       await context.read<AppState>().refreshCartCount();
-      setState(() => _cartQty = next);
+      widget.onCartQtyChanged(next);
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -237,12 +303,13 @@ class _ItemCardState extends State<_ItemCard> {
         builder: (_) => ItemDetailSheet(item: item),
       );
       if (mounted && added == true) {
-        setState(() {
-          _addedToCart = true;
-          _cartQty = 1;
-        });
+        widget.onCartQtyChanged(widget.cartQty > 0 ? widget.cartQty + 1 : 1);
+        await context.read<AppState>().refreshCartCount();
       }
     }
+
+    final qty = widget.cartQty;
+    final showPlusOnly = widget.cartStateReady && qty == 0;
 
     return GestureDetector(
       onTap: openItem,
@@ -341,7 +408,7 @@ class _ItemCardState extends State<_ItemCard> {
                     children: [
                       Text('₹${item.price.toStringAsFixed(0)}', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
                       const Spacer(),
-                      if (!_addedToCart)
+                      if (showPlusOnly)
                         Material(
                           color: item.isAvailable ? AppTheme.primary : Colors.grey.shade300,
                           shape: const CircleBorder(),
@@ -371,12 +438,12 @@ class _ItemCardState extends State<_ItemCard> {
                             children: [
                               _InlineQtyButton(
                                 icon: Icons.remove,
-                                onTap: _cartQty > 1 ? () => _changeCartQty(-1) : null,
+                                onTap: qty > 1 ? () => _changeCartQty(-1) : null,
                                 busy: _addingToCart,
                               ),
                               Padding(
                                 padding: const EdgeInsets.symmetric(horizontal: 8),
-                                child: Text('$_cartQty', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 14)),
+                                child: Text('$qty', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 14)),
                               ),
                               _InlineQtyButton(
                                 icon: Icons.add,
