@@ -147,6 +147,21 @@ class _HomeScreenState extends State<HomeScreen> {
                           restaurants: data.restaurants,
                         ),
 
+                        if (data.newRestaurants.isNotEmpty) ...[
+                          const SizedBox(height: 32),
+
+                          _SectionHeader(
+                            title: 'New Restaurants',
+                            onTap: _browseAll,
+                          ),
+
+                          const SizedBox(height: 14),
+
+                          _RestaurantHorizontalList(
+                            restaurants: data.newRestaurants,
+                          ),
+                        ],
+
                         if (data.popularItems.isNotEmpty) ...[
                           const SizedBox(height: 32),
 
@@ -163,21 +178,6 @@ class _HomeScreenState extends State<HomeScreen> {
                           ),
                         ],
 
-                        if (data.coupons.isNotEmpty) ...[
-                          const SizedBox(height: 32),
-
-                          _SectionHeader(
-                            title:
-                                AppLocalizations.of(context)!.bestDealsForYou,
-                            onTap: () {},
-                          ),
-
-                          const SizedBox(height: 14),
-
-                          _DealsList(
-                            coupons: data.coupons,
-                          ),
-                        ],
 
                         const SizedBox(height: 30),
                       ],

@@ -4,7 +4,6 @@ import '../state/app_state.dart';
 import '../l10n/app_localizations.dart';
 import '../theme.dart';
 import '../screens/home/home_screen.dart';
-import '../screens/search/search_screen.dart';
 import '../screens/cart/cart_screen.dart';
 import '../screens/orders/orders_screen.dart';
 import '../screens/profile/profile_screen.dart';
@@ -18,7 +17,7 @@ class RootShell extends StatefulWidget {
 
 class _RootShellState extends State<RootShell> {
   late int _index = widget.initialIndex;
-  static const _tabs = [HomeScreen(), SearchScreen(), OrdersScreen(), ChatsListScreen(), CartScreen(), ProfileScreen()];
+  static const _tabs = [HomeScreen(), OrdersScreen(), ChatsListScreen(), CartScreen(), ProfileScreen()];
 
   @override
   Widget build(BuildContext context) {
@@ -26,7 +25,6 @@ class _RootShellState extends State<RootShell> {
     final t = AppLocalizations.of(context)!;
     final items = [
       (Icons.home_rounded, Icons.home_outlined, t.navHome),
-      (Icons.search_rounded, Icons.search_rounded, t.navSearch),
       (Icons.receipt_long_rounded, Icons.receipt_long_outlined, t.navOrders),
       (Icons.chat_bubble_rounded, Icons.chat_bubble_outline_rounded, t.navChats),
       (Icons.shopping_bag_rounded, Icons.shopping_bag_outlined, t.navCart),
@@ -69,7 +67,7 @@ class _RootShellState extends State<RootShell> {
                         child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
                           Stack(clipBehavior: Clip.none, children: [
                             Icon(selected ? item.$1 : item.$2, size: 23, color: selected ? AppTheme.primary : AppTheme.muted),
-                            if (i == 4 && cartCount > 0)
+                            if (i == 3 && cartCount > 0)
                               Positioned(
                                 right: -8,
                                 top: -8,
