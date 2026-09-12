@@ -17,34 +17,12 @@ class _CartScreenState extends State<CartScreen> {
   late Future<CartSnapshot> _future;
   final Set<int> _busy = {};
 
-  @override
-  void initState() {
-    super.initState();
-    _load();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
-      context.read<AppState>().addListener(_onCartStateChanged);
-    });
-  }
-
-  @override
-  void dispose() {
-    context.read<AppState>().removeListener(_onCartStateChanged);
-    super.dispose();
-  }
-
-  void _load() {
-    _future = CartService.view();
-  }
-
-  void _onCartStateChanged() {
-    if (!mounted) return;
-    setState(_load);
-  }
+  @override void initState() { super.initState(); _load(); }
+  void _load() { _future = CartService.view(); }
 
   Future<void> _qty(CartItem item, int d) async {
     final q = item.quantity + d;
-    if (q < 1) return;
+    if (q < 0) return;
     setState(() => _busy.add(item.id));
     try {
       await CartService.updateQuantity(cartItemId: item.id, quantity: q);

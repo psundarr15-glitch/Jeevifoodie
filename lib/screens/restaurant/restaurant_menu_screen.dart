@@ -11,6 +11,7 @@ import '../cart/cart_screen.dart';
 import '../food/food_detail_screen.dart';
 import '../../widgets/quantity_stepper.dart';
 import '../../l10n/app_localizations.dart';
+import '../../utils/cart_restaurant_guard.dart';
 
 class RestaurantMenuScreen extends StatefulWidget {
   final int restaurantId;
@@ -55,7 +56,12 @@ class _RestaurantMenuScreenState extends State<RestaurantMenuScreen> {
   Future<void> _addItem(MenuItem item) async {
     setState(() => _busy.add(item.id));
     try {
-      await CartService.add(menuItemId: item.id);
+      final added = await CartRestaurantGuard.add(
+        context,
+        menuItemId: item.id,
+        restaurantId: widget.restaurantId,
+      );
+      if (!added) return;
       await _loadCart();
       if (!mounted) return;
       context.read<AppState>().refreshCartCount();

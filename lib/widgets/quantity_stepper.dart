@@ -28,7 +28,7 @@ class QuantityStepper extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          _StepButton(icon: Icons.remove, size: buttonSize, iconSize: iconSize, onTap: onDecrease),
+          _StepButton(icon: quantity <= 1 ? Icons.delete_outline_rounded : Icons.remove, size: buttonSize, iconSize: iconSize, onTap: onDecrease),
           Padding(
             padding: EdgeInsets.symmetric(horizontal: compact ? 10 : 16),
             child: Text('$quantity', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: compact ? 14 : 16)),

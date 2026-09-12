@@ -5,6 +5,7 @@ import '../../services/cart_service.dart';
 import '../../state/app_state.dart';
 import '../../theme.dart';
 import '../../l10n/app_localizations.dart';
+import '../../utils/cart_restaurant_guard.dart';
 
 class FoodDetailScreen extends StatefulWidget {
   final MenuItem item;
@@ -29,8 +30,8 @@ class _FoodDetailScreenState extends State<FoodDetailScreen> {
   Future<void> _addToCart() async {
     setState(() => _adding = true);
     try {
-      await CartService.add(menuItemId: widget.item.id, quantity: _qty);
-      if (!mounted) return;
+      final added = await CartRestaurantGuard.add(context, menuItemId: widget.item.id, restaurantId: widget.item.restaurantId, quantity: _qty);
+      if (!added || !mounted) return;
       await context.read<AppState>().refreshCartCount();
       Navigator.of(context).pop(true); // tell caller to refresh
     } catch (e) {
