@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
 
 import '../../services/customer_service.dart';
 import '../../models/menu_item.dart';
@@ -1381,7 +1380,15 @@ class _PopularFoodListState extends State<_PopularFoodList> {
     try {
       final cart = await CartService.view();
       if (!mounted) return;
-      setState(() { for (final item in cart.items) { _qty[item.menuItemId] = item.quantity; } });
+      setState(() {
+        // Replace the local map with the server cart. Do not merge it.
+        // After a restaurant reset, old menu-item quantities must disappear
+        // immediately; otherwise Popular Items keeps showing stale controls.
+        _qty.clear();
+        for (final item in cart.items) {
+          _qty[item.menuItemId] = item.quantity;
+        }
+      });
     } catch (_) {}
   }
 
@@ -1565,8 +1572,11 @@ class _ModernFoodCard
               ),
             ),
 
-            if (item.restaurantName != null) ...[
-              if (quantity == 0)
+            // Cart controls must not depend on restaurantName being present.
+            // The popular-items API can return a menu item without the optional
+            // restaurantName field, but restaurantId is still available for the
+            // cart guard.
+            if (quantity == 0)
               Align(
                 alignment: Alignment.centerRight,
                 child: SizedBox(
@@ -1582,23 +1592,32 @@ class _ModernFoodCard
               Align(
                 alignment: Alignment.centerRight,
                 child: busy
-                    ? const SizedBox(width: 80, height: 34, child: Center(child: CircularProgressIndicator(strokeWidth: 2)))
-                    : QuantityStepper(quantity: quantity, onDecrease: onDecrease, onIncrease: onIncrease, compact: true),
+                    ? const SizedBox(
+                        width: 80,
+                        height: 34,
+                        child: Center(
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        ),
+                      )
+                    : QuantityStepper(
+                        quantity: quantity,
+                        onDecrease: onDecrease,
+                        onIncrease: onIncrease,
+                        compact: true,
+                      ),
               ),
 
             const SizedBox(height: 2),
+            if (item.restaurantName != null)
               Text(
                 item.restaurantName!,
                 maxLines: 1,
-                overflow:
-                    TextOverflow.ellipsis,
+                overflow: TextOverflow.ellipsis,
                 style: TextStyle(
-                  color:
-                      AppTheme.textSecondary(context),
+                  color: AppTheme.textSecondary(context),
                   fontSize: 10.5,
                 ),
               ),
-            ],
 
             const SizedBox(height: 4),
 
