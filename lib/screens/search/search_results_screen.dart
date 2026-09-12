@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import '../../models/menu_item.dart';
 import '../../models/restaurant.dart';
 import '../../services/search_service.dart';
+import '../../services/cart_service.dart';
+import '../../state/app_state.dart';
+
 import '../../theme.dart';
 import '../../l10n/app_localizations.dart';
 import '../../widgets/restaurant_list_tile.dart';
@@ -160,6 +163,51 @@ class _ItemCardState extends State<_ItemCard> {
   late bool _liked = widget.item.likedByMe;
   bool _toggling = false;
   bool _addedToCart = false;
+  bool _addingToCart = false;
+  int _cartQty = 1;
+
+  Future<void> _addOneToCart() async {
+    if (_addingToCart || !widget.item.isAvailable) return;
+    setState(() => _addingToCart = true);
+    try {
+      await CartService.add(menuItemId: widget.item.id, quantity: 1);
+      if (!mounted) return;
+      await context.read<AppState>().refreshCartCount();
+      setState(() {
+        _addedToCart = true;
+        _cartQty = 1;
+      });
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(AppLocalizations.of(context)!.couldNotAddItem(e.toString()))),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _addingToCart = false);
+    }
+  }
+
+  Future<void> _changeCartQty(int delta) async {
+    if (_addingToCart) return;
+    final next = _cartQty + delta;
+    if (next < 1) return;
+    setState(() => _addingToCart = true);
+    try {
+      await CartService.add(menuItemId: widget.item.id, quantity: delta);
+      if (!mounted) return;
+      await context.read<AppState>().refreshCartCount();
+      setState(() => _cartQty = next);
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(AppLocalizations.of(context)!.couldNotAddItem(e.toString()))),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _addingToCart = false);
+    }
+  }
 
   Future<void> _toggleLike() async {
     if (_toggling) return;
@@ -188,7 +236,10 @@ class _ItemCardState extends State<_ItemCard> {
         builder: (_) => ItemDetailSheet(item: item),
       );
       if (mounted && added == true) {
-        setState(() => _addedToCart = true);
+        setState(() {
+          _addedToCart = true;
+          _cartQty = 1;
+        });
       }
     }
 
@@ -288,20 +339,52 @@ class _ItemCardState extends State<_ItemCard> {
                   Row(
                     children: [
                       Text('₹${item.price.toStringAsFixed(0)}', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
-                      if (_addedToCart) ...[
-                        const SizedBox(width: 8),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
-                          decoration: BoxDecoration(
-                            color: Colors.green.withOpacity(.10),
-                            borderRadius: BorderRadius.circular(10),
+                      const Spacer(),
+                      if (!_addedToCart)
+                        Material(
+                          color: item.isAvailable ? AppTheme.primary : Colors.grey.shade300,
+                          shape: const CircleBorder(),
+                          child: InkWell(
+                            customBorder: const CircleBorder(),
+                            onTap: item.isAvailable && !_addingToCart ? _addOneToCart : null,
+                            child: SizedBox(
+                              width: 34,
+                              height: 34,
+                              child: Center(
+                                child: _addingToCart
+                                    ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                                    : const Icon(Icons.add, color: Colors.white, size: 21),
+                              ),
+                            ),
                           ),
-                          child: const Text(
-                            'ADDED',
-                            style: TextStyle(color: Colors.green, fontSize: 9.5, fontWeight: FontWeight.w900),
+                        )
+                      else
+                        Container(
+                          height: 36,
+                          decoration: BoxDecoration(
+                            color: AppTheme.primary,
+                            borderRadius: BorderRadius.circular(18),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              _InlineQtyButton(
+                                icon: Icons.remove,
+                                onTap: _cartQty > 1 ? () => _changeCartQty(-1) : null,
+                                busy: _addingToCart,
+                              ),
+                              Padding(
+                                padding: const EdgeInsets.symmetric(horizontal: 8),
+                                child: Text('$_cartQty', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 14)),
+                              ),
+                              _InlineQtyButton(
+                                icon: Icons.add,
+                                onTap: () => _changeCartQty(1),
+                                busy: _addingToCart,
+                              ),
+                            ],
                           ),
                         ),
-                      ],
                     ],
                   ),
                 ],
@@ -340,6 +423,30 @@ class _RestaurantsTab extends StatelessWidget {
           onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => RestaurantMenuScreen(restaurantId: r.id))),
         );
       },
+    );
+  }
+}
+
+
+class _InlineQtyButton extends StatelessWidget {
+  final IconData icon;
+  final VoidCallback? onTap;
+  final bool busy;
+
+  const _InlineQtyButton({required this.icon, required this.onTap, required this.busy});
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: busy ? null : onTap,
+      borderRadius: BorderRadius.circular(18),
+      child: SizedBox(
+        width: 34,
+        height: 36,
+        child: Center(
+          child: Icon(icon, size: 18, color: onTap == null ? Colors.white54 : Colors.white),
+        ),
+      ),
     );
   }
 }
