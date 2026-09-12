@@ -126,18 +126,19 @@ class _OrderCard extends StatelessWidget {
             padding: const EdgeInsets.all(15),
             child: Row(
               children: [
-                Container(
-                  width: 68,
-                  height: 68,
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                      colors: [AppTheme.primary.withOpacity(0.14), AppTheme.primary.withOpacity(0.06)],
-                    ),
-                    borderRadius: BorderRadius.circular(AppTheme.radiusLg),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(AppTheme.radiusLg),
+                  child: SizedBox(
+                    width: 68,
+                    height: 68,
+                    child: order.imageUrl != null && order.imageUrl!.trim().isNotEmpty
+                        ? Image.network(
+                            order.imageUrl!,
+                            fit: BoxFit.cover,
+                            errorBuilder: (_, __, ___) => const _OrderImageFallback(),
+                          )
+                        : const _OrderImageFallback(),
                   ),
-                  child: const Icon(Icons.restaurant_rounded, color: AppTheme.primary, size: 30),
                 ),
                 const SizedBox(width: 14),
                 Expanded(
@@ -159,6 +160,25 @@ class _OrderCard extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+
+class _OrderImageFallback extends StatelessWidget {
+  const _OrderImageFallback();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [AppTheme.primary.withOpacity(0.14), AppTheme.primary.withOpacity(0.06)],
+        ),
+      ),
+      child: const Icon(Icons.restaurant_rounded, color: AppTheme.primary, size: 30),
     );
   }
 }
