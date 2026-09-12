@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
 import '../../services/customer_service.dart';
 import '../../models/menu_item.dart';
@@ -1564,11 +1565,8 @@ class _ModernFoodCard
               ),
             ),
 
-            // Cart controls must not depend on restaurantName being present.
-            // The popular-items API can return a menu item without the optional
-            // restaurantName field, but restaurantId is still available for the
-            // cart guard.
-            if (quantity == 0)
+            if (item.restaurantName != null) ...[
+              if (quantity == 0)
               Align(
                 alignment: Alignment.centerRight,
                 child: SizedBox(
@@ -1584,32 +1582,23 @@ class _ModernFoodCard
               Align(
                 alignment: Alignment.centerRight,
                 child: busy
-                    ? const SizedBox(
-                        width: 80,
-                        height: 34,
-                        child: Center(
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        ),
-                      )
-                    : QuantityStepper(
-                        quantity: quantity,
-                        onDecrease: onDecrease,
-                        onIncrease: onIncrease,
-                        compact: true,
-                      ),
+                    ? const SizedBox(width: 80, height: 34, child: Center(child: CircularProgressIndicator(strokeWidth: 2)))
+                    : QuantityStepper(quantity: quantity, onDecrease: onDecrease, onIncrease: onIncrease, compact: true),
               ),
 
             const SizedBox(height: 2),
-            if (item.restaurantName != null)
               Text(
                 item.restaurantName!,
                 maxLines: 1,
-                overflow: TextOverflow.ellipsis,
+                overflow:
+                    TextOverflow.ellipsis,
                 style: TextStyle(
-                  color: AppTheme.textSecondary(context),
+                  color:
+                      AppTheme.textSecondary(context),
                   fontSize: 10.5,
                 ),
               ),
+            ],
 
             const SizedBox(height: 4),
 
