@@ -6,12 +6,14 @@ class CartSnapshot {
   final List<CartItem> items;
   final int count;
   final double subtotal;
-  CartSnapshot({required this.items, required this.count, required this.subtotal});
+  final int? restaurantId;
+  CartSnapshot({required this.items, required this.count, required this.subtotal, this.restaurantId});
 
   factory CartSnapshot.fromJson(Map<String, dynamic> j) => CartSnapshot(
         items: (j['items'] as List? ?? []).map((e) => CartItem.fromJson(e as Map<String, dynamic>)).toList(),
         count: int.tryParse(j['cart_count']?.toString() ?? '') ?? 0,
         subtotal: double.tryParse(j['cart_subtotal']?.toString() ?? '') ?? 0,
+        restaurantId: int.tryParse(j['restaurant_id']?.toString() ?? ''),
       );
 }
 

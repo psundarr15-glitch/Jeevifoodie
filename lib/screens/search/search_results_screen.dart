@@ -206,6 +206,10 @@ class _ItemsTabState extends State<_ItemsTab> {
           cartQty: _cartQtyByItem[item.id] ?? 0,
           cartStateReady: _cartLoaded,
           onCartQtyChanged: (qty) => _setCartQty(item.id, qty),
+          onCartReset: () {
+            if (!mounted) return;
+            setState(() => _cartQtyByItem.clear());
+          },
         );
       },
     );
@@ -217,6 +221,7 @@ class _ItemCard extends StatefulWidget {
   final int cartQty;
   final bool cartStateReady;
   final ValueChanged<int> onCartQtyChanged;
+  final VoidCallback onCartReset;
 
   const _ItemCard({
     super.key,
@@ -224,6 +229,7 @@ class _ItemCard extends StatefulWidget {
     required this.cartQty,
     required this.cartStateReady,
     required this.onCartQtyChanged,
+    required this.onCartReset,
   });
 
   @override
@@ -235,11 +241,80 @@ class _ItemCardState extends State<_ItemCard> {
   bool _toggling = false;
   bool _addingToCart = false;
 
+  Future<bool> _confirmCartReset() async {
+    final result = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        titlePadding: const EdgeInsets.fromLTRB(24, 22, 24, 8),
+        contentPadding: const EdgeInsets.fromLTRB(24, 4, 24, 8),
+        actionsPadding: const EdgeInsets.fromLTRB(16, 4, 16, 12),
+        title: Row(
+          children: [
+            Container(
+              width: 38,
+              height: 38,
+              decoration: BoxDecoration(
+                color: Colors.orange.withOpacity(.12),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.priority_high_rounded, color: Colors.orange),
+            ),
+            const SizedBox(width: 12),
+            const Expanded(
+              child: Text(
+                'Are you sure want to reset?',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
+              ),
+            ),
+          ],
+        ),
+        content: const Text(
+          'You have item from another restaurant in cart. If you continue, your all previous item from cart will be removed.',
+          style: TextStyle(fontSize: 14, height: 1.45),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('No'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: const Text('Yes'),
+          ),
+        ],
+      ),
+    );
+    return result == true;
+  }
+
+  Future<void> _clearCartAndAdd() async {
+    final cart = await CartService.view();
+    for (final cartItem in cart.items) {
+      await CartService.updateQuantity(cartItemId: cartItem.id, quantity: 0);
+    }
+    widget.onCartReset();
+    await CartService.add(menuItemId: widget.item.id, quantity: 1);
+  }
+
   Future<void> _addOneToCart() async {
     if (_addingToCart || !widget.item.isAvailable) return;
     setState(() => _addingToCart = true);
     try {
-      await CartService.add(menuItemId: widget.item.id, quantity: 1);
+      final cart = await CartService.view();
+      final hasOtherRestaurant = cart.items.isNotEmpty &&
+          cart.restaurantId != null &&
+          cart.restaurantId != widget.item.restaurantId;
+
+      if (hasOtherRestaurant) {
+        final confirmed = await _confirmCartReset();
+        if (!confirmed) return;
+        await _clearCartAndAdd();
+      } else {
+        await CartService.add(menuItemId: widget.item.id, quantity: 1);
+      }
+
       if (!mounted) return;
       await context.read<AppState>().refreshCartCount();
       widget.onCartQtyChanged(widget.cartQty > 0 ? widget.cartQty + 1 : 1);
