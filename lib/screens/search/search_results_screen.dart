@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../models/menu_item.dart';
+import '../../models/cart_item.dart';
 import '../../models/restaurant.dart';
 import '../../services/search_service.dart';
 import '../../services/cart_service.dart';
@@ -245,45 +246,83 @@ class _ItemCardState extends State<_ItemCard> {
     final result = await showDialog<bool>(
       context: context,
       barrierDismissible: false,
-      builder: (dialogContext) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        titlePadding: const EdgeInsets.fromLTRB(24, 22, 24, 8),
-        contentPadding: const EdgeInsets.fromLTRB(24, 4, 24, 8),
-        actionsPadding: const EdgeInsets.fromLTRB(16, 4, 16, 12),
-        title: Row(
-          children: [
-            Container(
-              width: 38,
-              height: 38,
-              decoration: BoxDecoration(
-                color: Colors.orange.withOpacity(.12),
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(Icons.priority_high_rounded, color: Colors.orange),
+      builder: (dialogContext) => Dialog(
+        insetPadding: const EdgeInsets.symmetric(horizontal: 24),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 390),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(24, 24, 24, 20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 58,
+                  height: 58,
+                  decoration: BoxDecoration(
+                    color: Colors.orange.withOpacity(.12),
+                    shape: BoxShape.circle,
+                  ),
+                  alignment: Alignment.center,
+                  child: const Icon(
+                    Icons.priority_high_rounded,
+                    color: Colors.orange,
+                    size: 34,
+                  ),
+                ),
+                const SizedBox(height: 18),
+                const Text(
+                  'Are you sure you want to reset?',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 19,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                const SizedBox(height: 14),
+                const Text(
+                  'You have items from another restaurant in your cart. If you continue, all previous items will be removed.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 14,
+                    height: 1.5,
+                    color: Colors.black54,
+                  ),
+                ),
+                const SizedBox(height: 24),
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: () => Navigator.of(dialogContext).pop(false),
+                        style: OutlinedButton.styleFrom(
+                          minimumSize: const Size.fromHeight(48),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                        ),
+                        child: const Text('No'),
+                      ),
+                    ),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: () => Navigator.of(dialogContext).pop(true),
+                        style: ElevatedButton.styleFrom(
+                          minimumSize: const Size.fromHeight(48),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                        ),
+                        child: const Text('Yes'),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
             ),
-            const SizedBox(width: 12),
-            const Expanded(
-              child: Text(
-                'Are you sure want to reset?',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
-              ),
-            ),
-          ],
-        ),
-        content: const Text(
-          'You have item from another restaurant in cart. If you continue, your all previous item from cart will be removed.',
-          style: TextStyle(fontSize: 14, height: 1.45),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(false),
-            child: const Text('No'),
           ),
-          ElevatedButton(
-            onPressed: () => Navigator.of(dialogContext).pop(true),
-            child: const Text('Yes'),
-          ),
-        ],
+        ),
       ),
     );
     return result == true;
@@ -291,9 +330,17 @@ class _ItemCardState extends State<_ItemCard> {
 
   Future<void> _clearCartAndAdd() async {
     final cart = await CartService.view();
-    for (final cartItem in cart.items) {
+    for (final cartItem in List<CartItem>.from(cart.items)) {
       await CartService.updateQuantity(cartItemId: cartItem.id, quantity: 0);
     }
+
+    // The backend keeps the empty cart row, so verify that its item list is
+    // actually empty before adding the item from the new restaurant.
+    final cleared = await CartService.view();
+    if (cleared.items.isNotEmpty) {
+      throw Exception('Could not reset cart. Please try again.');
+    }
+
     widget.onCartReset();
     await CartService.add(menuItemId: widget.item.id, quantity: 1);
   }
