@@ -398,6 +398,37 @@ class _ItemCardState extends State<_ItemCard> {
     }
   }
 
+  Future<void> _removeFromCart() async {
+    if (_addingToCart || widget.cartQty <= 0) return;
+    setState(() => _addingToCart = true);
+    try {
+      final cart = await CartService.view();
+      final cartItem = cart.items.cast<CartItem?>().firstWhere(
+        (item) => item?.menuItemId == widget.item.id,
+        orElse: () => null,
+      );
+
+      if (cartItem != null) {
+        await CartService.updateQuantity(
+          cartItemId: cartItem.id,
+          quantity: 0,
+        );
+      }
+
+      if (!mounted) return;
+      await context.read<AppState>().refreshCartCount();
+      widget.onCartQtyChanged(0);
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(AppLocalizations.of(context)!.couldNotAddItem(e.toString()))),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _addingToCart = false);
+    }
+  }
+
   Future<void> _toggleLike() async {
     if (_toggling) return;
     setState(() { _toggling = true; _liked = !_liked; });
@@ -559,8 +590,8 @@ class _ItemCardState extends State<_ItemCard> {
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               _InlineQtyButton(
-                                icon: Icons.remove,
-                                onTap: qty > 1 ? () => _changeCartQty(-1) : null,
+                                icon: qty == 1 ? Icons.delete_outline : Icons.remove,
+                                onTap: qty == 1 ? _removeFromCart : () => _changeCartQty(-1),
                                 busy: _addingToCart,
                               ),
                               Padding(
