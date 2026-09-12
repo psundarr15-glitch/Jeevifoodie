@@ -1,9 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
 import '../../models/menu_item.dart';
 import '../../services/search_service.dart';
-import '../../services/cart_service.dart';
-import '../../state/app_state.dart';
 import '../../theme.dart';
 import '../../l10n/app_localizations.dart';
 import '../restaurant/restaurant_menu_screen.dart';
@@ -20,27 +17,6 @@ class _ItemDetailSheetState extends State<ItemDetailSheet> {
   late bool _liked = widget.item.likedByMe;
   late int _likeCount = widget.item.likeCount;
   bool _toggling = false;
-  int _qty = 1;
-  bool _adding = false;
-
-  Future<void> _addToCart() async {
-    if (_adding || !widget.item.isAvailable || !widget.item.isOpen) return;
-    setState(() => _adding = true);
-    try {
-      await CartService.add(menuItemId: widget.item.id, quantity: _qty);
-      if (!mounted) return;
-      await context.read<AppState>().refreshCartCount();
-      Navigator.of(context).pop(true);
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(AppLocalizations.of(context)!.couldNotAddItem(e.toString()))),
-        );
-      }
-    } finally {
-      if (mounted) setState(() => _adding = false);
-    }
-  }
 
   Future<void> _toggleLike() async {
     if (_toggling) return;
@@ -180,55 +156,6 @@ class _ItemDetailSheetState extends State<ItemDetailSheet> {
                   padding: const EdgeInsets.symmetric(vertical: 12),
                   decoration: BoxDecoration(color: AppTheme.primary.withOpacity(0.08), borderRadius: BorderRadius.circular(10)),
                   child: Text(t.storeCurrentlyClosed, textAlign: TextAlign.center, style: const TextStyle(color: AppTheme.primary, fontWeight: FontWeight.w600)),
-                ),
-              ] else if (!item.isAvailable) ...[
-                const SizedBox(height: 18),
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.symmetric(vertical: 12),
-                  decoration: BoxDecoration(color: Colors.red.withOpacity(0.08), borderRadius: BorderRadius.circular(10)),
-                  child: Text(t.notAvailableNow, textAlign: TextAlign.center, style: const TextStyle(color: Colors.red, fontWeight: FontWeight.w700)),
-                ),
-              ] else ...[
-                const SizedBox(height: 22),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(t.quantityLabel, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800)),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 5),
-                      decoration: BoxDecoration(color: AppTheme.primary.withOpacity(0.06), borderRadius: BorderRadius.circular(16)),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          _QtyButton(icon: Icons.remove, onTap: _qty > 1 ? () => setState(() => _qty--) : null),
-                          Padding(padding: const EdgeInsets.symmetric(horizontal: 18), child: Text('$_qty', style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w900))),
-                          _QtyButton(icon: Icons.add, onTap: _qty < 99 ? () => setState(() => _qty++) : null),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 14),
-                SizedBox(
-                  width: double.infinity,
-                  height: 52,
-                  child: ElevatedButton(
-                    onPressed: _adding ? null : _addToCart,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppTheme.gold,
-                      foregroundColor: AppTheme.primaryDark,
-                      elevation: 0,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                    ),
-                    child: _adding
-                        ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
-                        : Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-                            Text(t.addToCartAmount((item.price * _qty).toStringAsFixed(2)), style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 15.5)),
-                            const SizedBox(width: 8),
-                            const Icon(Icons.shopping_cart_rounded, size: 19),
-                          ]),
-                  ),
                 ),
               ],
             ],

@@ -126,18 +126,36 @@ class _OrderCard extends StatelessWidget {
             padding: const EdgeInsets.all(15),
             child: Row(
               children: [
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(AppTheme.radiusLg),
-                  child: SizedBox(
-                    width: 68,
-                    height: 68,
-                    child: order.imageUrl != null && order.imageUrl!.trim().isNotEmpty
+                Container(
+                  width: 68,
+                  height: 68,
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [AppTheme.primary.withOpacity(0.14), AppTheme.primary.withOpacity(0.06)],
+                    ),
+                    borderRadius: BorderRadius.circular(AppTheme.radiusLg),
+                  ),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(AppTheme.radiusLg),
+                    child: (order.imageUrl?.trim().isNotEmpty ?? false)
                         ? Image.network(
-                            order.imageUrl!,
+                            order.imageUrl!.trim(),
+                            width: 68,
+                            height: 68,
                             fit: BoxFit.cover,
-                            errorBuilder: (_, __, ___) => const _OrderImageFallback(),
+                            errorBuilder: (_, __, ___) => const Icon(
+                              Icons.restaurant_rounded,
+                              color: AppTheme.primary,
+                              size: 30,
+                            ),
                           )
-                        : const _OrderImageFallback(),
+                        : const Icon(
+                            Icons.restaurant_rounded,
+                            color: AppTheme.primary,
+                            size: 30,
+                          ),
                   ),
                 ),
                 const SizedBox(width: 14),
@@ -160,25 +178,6 @@ class _OrderCard extends StatelessWidget {
           ),
         ),
       ),
-    );
-  }
-}
-
-
-class _OrderImageFallback extends StatelessWidget {
-  const _OrderImageFallback();
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [AppTheme.primary.withOpacity(0.14), AppTheme.primary.withOpacity(0.06)],
-        ),
-      ),
-      child: const Icon(Icons.restaurant_rounded, color: AppTheme.primary, size: 30),
     );
   }
 }
