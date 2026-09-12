@@ -31,5 +31,52 @@ class _SearchScreenState extends State<SearchScreen> {
 }
 class _Section extends StatelessWidget{final String title;final String? action;final VoidCallback? onAction;final Widget child;const _Section({required this.title,required this.child,this.action,this.onAction});@override Widget build(BuildContext c)=>Padding(padding:const EdgeInsets.only(top:12,bottom:12),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Row(children:[Expanded(child:Text(title,style:const TextStyle(fontSize:20,fontWeight:FontWeight.w900))),if(action!=null)TextButton(onPressed:onAction,child:Text(action!,style:const TextStyle(fontWeight:FontWeight.w800)))]),const SizedBox(height:12),child]));}
 class _Pill extends StatelessWidget{final String label;final VoidCallback onTap;final VoidCallback onRemove;const _Pill({required this.label,required this.onTap,required this.onRemove});@override Widget build(BuildContext c)=>Material(color:AppTheme.surface(c),borderRadius:BorderRadius.circular(14),child:InkWell(onTap:onTap,borderRadius:BorderRadius.circular(14),child:Padding(padding:const EdgeInsets.fromLTRB(14,10,8,10),child:Row(mainAxisSize:MainAxisSize.min,children:[const Icon(Icons.history_rounded,size:16),const SizedBox(width:7),Text(label,style:const TextStyle(fontWeight:FontWeight.w600)),const SizedBox(width:5),GestureDetector(onTap:onRemove,child:const Icon(Icons.close_rounded,size:16))]))));}
-class _FoodSuggestion extends StatelessWidget{final MenuItem item;final VoidCallback onTap;const _FoodSuggestion({required this.item,required this.onTap});@override Widget build(BuildContext c){final image=item.image;return Material(color:AppTheme.surface(c),borderRadius:BorderRadius.circular(18),child:InkWell(onTap:onTap,borderRadius:BorderRadius.circular(18),child:Padding(padding:const EdgeInsets.all(9),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Expanded(child:ClipRRect(borderRadius:BorderRadius.circular(14),child:image!=null&&image.isNotEmpty?Image.network(image,fit:BoxFit.cover,width:double.infinity,errorBuilder:(_,__,___)=>_FoodIcon()):_FoodIcon())),const SizedBox(height:8),Text(item.name,maxLines:1,overflow:TextOverflow.ellipsis,style:const TextStyle(fontWeight:FontWeight.w800,fontSize:13))]))));}}
-class _FoodIcon extends StatelessWidget{const _FoodIcon();@override Widget build(BuildContext c)=>Container(color:AppTheme.primary.withOpacity(.08),child:const Center(child:Icon(Icons.restaurant_rounded,size:30,color:AppTheme.primary)));}
+class _FoodSuggestion extends StatelessWidget{
+  final MenuItem item;
+  final VoidCallback onTap;
+  const _FoodSuggestion({required this.item,required this.onTap});
+
+  @override
+  Widget build(BuildContext c){
+    const fallbackImage='https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=600&h=400&fit=crop';
+    final image=item.image?.trim();
+    return Material(
+      color:AppTheme.surface(c),
+      borderRadius:BorderRadius.circular(18),
+      child:InkWell(
+        onTap:onTap,
+        borderRadius:BorderRadius.circular(18),
+        child:Padding(
+          padding:const EdgeInsets.all(9),
+          child:Column(
+            crossAxisAlignment:CrossAxisAlignment.start,
+            children:[
+              Expanded(
+                child:ClipRRect(
+                  borderRadius:BorderRadius.circular(14),
+                  child:Image.network(
+                    image!=null&&image.isNotEmpty?image:fallbackImage,
+                    fit:BoxFit.cover,
+                    width:double.infinity,
+                    errorBuilder:(_,__,___)=>Image.network(
+                      fallbackImage,
+                      fit:BoxFit.cover,
+                      width:double.infinity,
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height:8),
+              Text(
+                item.name,
+                maxLines:1,
+                overflow:TextOverflow.ellipsis,
+                style:const TextStyle(fontWeight:FontWeight.w800,fontSize:13),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
