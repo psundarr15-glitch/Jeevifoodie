@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 
-/// Colors matched to the "Jeevi Foodie" red/yellow/white logo: a strong
-/// appetizing red as the primary brand color, gold/yellow for CTA
-/// accents and badges (splash, "ORDER NOW", ratings), white for cards
-/// and surfaces.
+/// Jeevi Foodie premium design system, matched to the "Jeevi Foodie"
+/// red/yellow/white logo: a strong appetizing red as the primary brand
+/// color, gold/yellow for CTA accents and badges (splash, "ORDER NOW",
+/// ratings), white for cards and surfaces. This file mirrors the shared
+/// design-system structure used across the restaurant and delivery apps —
+/// same radius/spacing/shadow/gradient tokens — so all three apps read as
+/// one premium product even though each keeps its own brand accent.
 ///
 /// Universal status colors elsewhere in the app (veg = green dot,
 /// non-veg = red dot, wallet credit = green / debit = red, completed
@@ -15,7 +18,82 @@ class AppTheme {
   static const primary = Color(0xFFD6291B); // brand red
   static const primaryDark = Color(0xFF8E1610); // deep red/maroon
   static const gold = Color(0xFFF7B500); // CTA accent on dark/red backgrounds
-  static const success = Color(0xFFD6291B); // rating badges / accent text on white cards
+  static const goldDark = Color(0xFFD99A00);
+  // True success green (order placed, delivered, wallet credit) — previously
+  // aliased to the brand red, which made "success" states read as alerts.
+  static const success = Color(0xFF12A968);
+  static const canvas = Color(0xFFF9F7F5);
+  static const ink = Color(0xFF1F1A19);
+  static const muted = Color(0xFF6F6560);
+  static const line = Color(0xFFEBE6E3);
+  static const softRed = Color(0xFFFCEBE9);
+  static const softGreen = Color(0xFFE9FAF2);
+  static const softOrange = Color(0xFFFFF3E1);
+
+  // ---- Radius scale ------------------------------------------------------
+  static const radiusSm = 10.0;
+  static const radiusMd = 16.0;
+  static const radiusLg = 20.0;
+  static const radiusXl = 26.0;
+  static const radiusPill = 999.0;
+
+  // ---- Spacing scale -------------------------------------------------------
+  static const space4 = 4.0;
+  static const space8 = 8.0;
+  static const space12 = 12.0;
+  static const space16 = 16.0;
+  static const space20 = 20.0;
+  static const space24 = 24.0;
+  static const space32 = 32.0;
+
+  // ---- Gradients -----------------------------------------------------------
+  static const primaryGradient = LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [primary, primaryDark],
+  );
+  static const goldGradient = LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [gold, goldDark],
+  );
+  static const canvasGradient = LinearGradient(
+    begin: Alignment.topCenter,
+    end: Alignment.bottomCenter,
+    colors: [Color(0xFFFFFFFF), canvas],
+  );
+
+  /// Soft resting shadow for cards/tiles on a light canvas.
+  static List<BoxShadow> shadowSoft(BuildContext context) => [
+        BoxShadow(
+          color: Theme.of(context).brightness == Brightness.dark
+              ? Colors.black.withOpacity(0.35)
+              : const Color(0x0F1F1A19),
+          blurRadius: 16,
+          offset: const Offset(0, 4),
+        ),
+      ];
+
+  /// Deeper "floating" shadow for hero cards, sheets and premium banners.
+  static List<BoxShadow> shadowElevated(BuildContext context) => [
+        BoxShadow(
+          color: Theme.of(context).brightness == Brightness.dark
+              ? Colors.black.withOpacity(0.45)
+              : const Color(0x1A1F1A19),
+          blurRadius: 28,
+          offset: const Offset(0, 12),
+        ),
+      ];
+
+  /// Brand-colored glow used under primary CTAs / floating action buttons
+  /// so they read as "lifted" rather than flat filled rectangles.
+  static List<BoxShadow> shadowColored(
+    Color color, {
+    double opacity = 0.32,
+    double blur = 22,
+    Offset offset = const Offset(0, 10),
+  }) =>
+      [BoxShadow(color: color.withOpacity(opacity), blurRadius: blur, offset: offset)];
 
   /// Semantic helpers so screens don't hardcode "white card" / "black87
   /// text" and then silently break under dark mode - use these instead
@@ -27,63 +105,147 @@ class AppTheme {
       Theme.of(context).brightness == Brightness.dark ? const Color(0xFF1E1B1A) : Colors.white;
   static Color scaffoldBg(BuildContext context) => Theme.of(context).scaffoldBackgroundColor;
   static Color textPrimary(BuildContext context) =>
-      Theme.of(context).brightness == Brightness.dark ? Colors.white : Colors.black87;
+      Theme.of(context).brightness == Brightness.dark ? Colors.white : ink;
   static Color textSecondary(BuildContext context) =>
-      Theme.of(context).brightness == Brightness.dark ? Colors.grey.shade400 : Colors.grey.shade600;
+      Theme.of(context).brightness == Brightness.dark ? Colors.grey.shade400 : muted;
   static Color borderColor(BuildContext context) =>
-      Theme.of(context).brightness == Brightness.dark ? Colors.grey.shade700 : Colors.grey.shade300;
+      Theme.of(context).brightness == Brightness.dark ? Colors.grey.shade700 : line;
+
+  /// Frosted, semi-transparent panel color for overlays sitting on top of
+  /// imagery (e.g. a rating pill on a food photo) so premium screens don't
+  /// default to a plain opaque white box everywhere.
+  static Color glassSurface(BuildContext context) =>
+      Theme.of(context).brightness == Brightness.dark
+          ? Colors.black.withOpacity(0.55)
+          : Colors.white.withOpacity(0.85);
 
   static ThemeData light() {
     return ThemeData(
       useMaterial3: true,
       colorScheme: ColorScheme.fromSeed(seedColor: primary, primary: primary),
-      scaffoldBackgroundColor: const Color(0xFFF7F7F5),
+      scaffoldBackgroundColor: canvas,
+      visualDensity: VisualDensity.standard,
+      splashFactory: InkSparkle.splashFactory,
       appBarTheme: const AppBarTheme(
-        backgroundColor: Colors.white,
-        foregroundColor: Colors.black,
+        backgroundColor: canvas,
+        foregroundColor: ink,
         elevation: 0,
+        scrolledUnderElevation: 0,
         centerTitle: false,
+        titleTextStyle: TextStyle(fontSize: 22, fontWeight: FontWeight.w900, color: ink, letterSpacing: -0.6),
+      ),
+      textTheme: const TextTheme(
+        headlineLarge: TextStyle(fontSize: 30, fontWeight: FontWeight.w900, color: ink, letterSpacing: -0.9),
+        headlineMedium: TextStyle(fontSize: 25, fontWeight: FontWeight.w900, color: ink, letterSpacing: -0.6),
+        titleLarge: TextStyle(fontSize: 20, fontWeight: FontWeight.w800, color: ink),
+        titleMedium: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: ink),
+        bodyLarge: TextStyle(fontSize: 15, color: ink, height: 1.35),
+        bodyMedium: TextStyle(fontSize: 14, color: muted, height: 1.35),
+        labelLarge: TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
           backgroundColor: primary,
           foregroundColor: Colors.white,
+          disabledBackgroundColor: primary.withOpacity(0.4),
           padding: const EdgeInsets.symmetric(vertical: 16),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-        ),
+          minimumSize: const Size.fromHeight(54),
+          elevation: 2,
+          shadowColor: primary.withOpacity(0.45),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(radiusLg)),
+          textStyle: const TextStyle(fontSize: 15.5, fontWeight: FontWeight.w800, letterSpacing: 0.1),
+        ).copyWith(overlayColor: WidgetStateProperty.all(Colors.white.withOpacity(0.08))),
       ),
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
           foregroundColor: primary,
-          side: const BorderSide(color: primary),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+          minimumSize: const Size.fromHeight(52),
+          side: const BorderSide(color: primary, width: 1.4),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(radiusLg)),
+          textStyle: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800),
         ),
+      ),
+      textButtonTheme: TextButtonThemeData(
+        style: TextButton.styleFrom(foregroundColor: primary, textStyle: const TextStyle(fontWeight: FontWeight.w700)),
+      ),
+      iconButtonTheme: IconButtonThemeData(
+        style: IconButton.styleFrom(minimumSize: const Size(44, 44), tapTargetSize: MaterialTapTargetSize.padded),
       ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
         fillColor: Colors.white,
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(14),
-          borderSide: const BorderSide(color: Color(0xFFDDDDDD)),
+          borderRadius: BorderRadius.circular(radiusMd),
+          borderSide: const BorderSide(color: line),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(radiusMd),
+          borderSide: const BorderSide(color: line),
         ),
         focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(14),
-          borderSide: const BorderSide(color: primary, width: 1.4),
+          borderRadius: BorderRadius.circular(radiusMd),
+          borderSide: const BorderSide(color: primary, width: 1.6),
         ),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        errorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(radiusMd),
+          borderSide: const BorderSide(color: Color(0xFFE5484D)),
+        ),
       ),
       cardTheme: CardThemeData(
         elevation: 0,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+        margin: EdgeInsets.zero,
+        clipBehavior: Clip.antiAlias,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(radiusXl)),
         color: Colors.white,
       ),
-      navigationBarTheme: NavigationBarThemeData(
+      dividerTheme: const DividerThemeData(color: line, thickness: 1, space: 1),
+      chipTheme: ChipThemeData(
         backgroundColor: Colors.white,
-        indicatorColor: primary.withOpacity(0.12),
+        selectedColor: softRed,
+        disabledColor: line,
+        side: const BorderSide(color: line),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(radiusPill)),
+        labelStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: ink),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      ),
+      floatingActionButtonTheme: const FloatingActionButtonThemeData(
+        backgroundColor: primary,
+        foregroundColor: Colors.white,
+        elevation: 6,
+        highlightElevation: 10,
+      ),
+      dialogTheme: DialogThemeData(
+        backgroundColor: Colors.white,
+        elevation: 8,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(radiusXl)),
+      ),
+      bottomSheetTheme: BottomSheetThemeData(
+        backgroundColor: Colors.white,
+        modalBackgroundColor: Colors.white,
+        showDragHandle: true,
+        elevation: 0,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(radiusXl))),
+      ),
+      snackBarTheme: SnackBarThemeData(
+        behavior: SnackBarBehavior.floating,
+        backgroundColor: ink,
+        contentTextStyle: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(radiusMd)),
+      ),
+      progressIndicatorTheme: const ProgressIndicatorThemeData(color: primary),
+      navigationBarTheme: NavigationBarThemeData(
+        height: 80,
+        backgroundColor: Colors.white,
+        elevation: 8,
+        shadowColor: Colors.black.withOpacity(0.08),
+        surfaceTintColor: Colors.transparent,
+        indicatorColor: softRed,
+        indicatorShape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(radiusPill)),
         labelTextStyle: WidgetStateProperty.resolveWith(
           (states) => TextStyle(
             fontSize: 11,
-            fontWeight: states.contains(WidgetState.selected) ? FontWeight.bold : FontWeight.normal,
+            fontWeight: states.contains(WidgetState.selected) ? FontWeight.w800 : FontWeight.w600,
             color: states.contains(WidgetState.selected) ? primary : Colors.grey.shade600,
           ),
         ),
@@ -103,41 +265,58 @@ class AppTheme {
       brightness: Brightness.dark,
       scaffoldBackgroundColor: const Color(0xFF141110),
       colorScheme: ColorScheme.fromSeed(seedColor: primary, primary: primary, brightness: Brightness.dark),
-      appBarTheme: const AppBarTheme(elevation: 0, centerTitle: false),
+      appBarTheme: const AppBarTheme(
+        elevation: 0,
+        scrolledUnderElevation: 0,
+        centerTitle: false,
+        titleTextStyle: TextStyle(fontSize: 22, fontWeight: FontWeight.w900, color: Colors.white, letterSpacing: -0.6),
+      ),
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
           backgroundColor: primary,
           foregroundColor: Colors.white,
           padding: const EdgeInsets.symmetric(vertical: 14),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          minimumSize: const Size.fromHeight(54),
+          elevation: 2,
+          shadowColor: primary.withOpacity(0.5),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(radiusLg)),
         ),
       ),
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
           foregroundColor: primary,
           side: const BorderSide(color: primary),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(radiusLg)),
         ),
       ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(radiusMd)),
+        enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(radiusMd), borderSide: const BorderSide(color: Color(0xFF3A3536))),
         focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(14),
-          borderSide: const BorderSide(color: primary, width: 1.4),
+          borderRadius: BorderRadius.circular(radiusMd),
+          borderSide: const BorderSide(color: primary, width: 1.6),
         ),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       ),
       cardTheme: CardThemeData(
         elevation: 0,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        clipBehavior: Clip.antiAlias,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(radiusXl)),
+      ),
+      dialogTheme: DialogThemeData(shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(radiusXl))),
+      bottomSheetTheme: BottomSheetThemeData(
+        showDragHandle: true,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(radiusXl))),
       ),
       navigationBarTheme: NavigationBarThemeData(
+        height: 80,
         indicatorColor: primary.withOpacity(0.25),
+        indicatorShape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(radiusPill)),
         labelTextStyle: WidgetStateProperty.resolveWith(
           (states) => TextStyle(
             fontSize: 11,
-            fontWeight: states.contains(WidgetState.selected) ? FontWeight.bold : FontWeight.normal,
+            fontWeight: states.contains(WidgetState.selected) ? FontWeight.w800 : FontWeight.w600,
             color: states.contains(WidgetState.selected) ? primary : Colors.grey.shade400,
           ),
         ),
