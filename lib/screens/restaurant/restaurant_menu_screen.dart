@@ -160,72 +160,88 @@ class _RestaurantMenuScreenState extends State<RestaurantMenuScreen> {
                   SliverList(
                     delegate: SliverChildListDelegate([
                       Padding(
-                        padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+                        padding: const EdgeInsets.fromLTRB(16, 14, 16, 8),
                         child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Transform.translate(
-                              offset: const Offset(0, -26),
-                              child: Row(
-                                crossAxisAlignment: CrossAxisAlignment.end,
-                                children: [
-                                  Container(
-                                    width: 76,
-                                    height: 76,
-                                    decoration: BoxDecoration(
-                                      color: Colors.white,
-                                      shape: BoxShape.circle,
-                                      border: Border.all(color: Colors.white, width: 4),
-                                      boxShadow: const [BoxShadow(blurRadius: 12, offset: Offset(0, 5), color: Colors.black12)],
-                                    ),
-                                    clipBehavior: Clip.antiAlias,
-                                    child: restaurant.logo != null && restaurant.logo!.isNotEmpty
-                                        ? Image.network(restaurant.logo!, fit: BoxFit.cover)
-                                        : restaurant.image != null && restaurant.image!.isNotEmpty
-                                            ? Image.network(restaurant.image!, fit: BoxFit.cover)
-                                            : Center(child: Text(restaurant.name.isNotEmpty ? restaurant.name[0].toUpperCase() : 'R', style: const TextStyle(fontSize: 28, fontWeight: FontWeight.w800))),
+                            Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Container(
+                                  width: 76,
+                                  height: 76,
+                                  decoration: BoxDecoration(
+                                    color: Colors.white,
+                                    shape: BoxShape.circle,
+                                    border: Border.all(color: Colors.white, width: 4),
+                                    boxShadow: const [BoxShadow(blurRadius: 12, offset: Offset(0, 5), color: Colors.black12)],
                                   ),
-                                  const SizedBox(width: 12),
-                                  Expanded(
-                                    child: Padding(
-                                      padding: const EdgeInsets.only(bottom: 2),
-                                      child: Column(
+                                  clipBehavior: Clip.antiAlias,
+                                  child: restaurant.logo != null && restaurant.logo!.isNotEmpty
+                                      ? Image.network(restaurant.logo!, fit: BoxFit.cover)
+                                      : restaurant.image != null && restaurant.image!.isNotEmpty
+                                          ? Image.network(restaurant.image!, fit: BoxFit.cover)
+                                          : Center(child: Text(restaurant.name.isNotEmpty ? restaurant.name[0].toUpperCase() : 'R', style: const TextStyle(fontSize: 28, fontWeight: FontWeight.w800))),
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Row(
                                         crossAxisAlignment: CrossAxisAlignment.start,
-                                        mainAxisSize: MainAxisSize.min,
                                         children: [
-                                          Text(restaurant.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w800)),
-                                          if ((restaurant.description ?? '').isNotEmpty)
-                                            Text(restaurant.description!, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(color: Colors.grey.shade600, fontSize: 12.5)),
+                                          Expanded(
+                                            child: Text(
+                                              restaurant.name,
+                                              maxLines: 2,
+                                              overflow: TextOverflow.ellipsis,
+                                              style: const TextStyle(fontSize: 20, height: 1.12, fontWeight: FontWeight.w800),
+                                            ),
+                                          ),
+                                          const SizedBox(width: 8),
+                                          Row(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              _LikeButton(restaurant: restaurant),
+                                              const SizedBox(width: 4),
+                                              IconButton(
+                                                tooltip: 'Share',
+                                                visualDensity: VisualDensity.compact,
+                                                onPressed: () => Share.share('Check out ${restaurant.name} on JeeviFoodie'),
+                                                icon: const Icon(Icons.share_rounded, size: 21),
+                                                style: IconButton.styleFrom(backgroundColor: Colors.grey.shade100),
+                                              ),
+                                            ],
+                                          ),
                                         ],
                                       ),
-                                    ),
+                                      if ((restaurant.description ?? '').trim().isNotEmpty) ...[
+                                        const SizedBox(height: 5),
+                                        Text(
+                                          restaurant.description!.trim(),
+                                          maxLines: 2,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: TextStyle(color: Colors.grey.shade600, fontSize: 12.5, height: 1.25),
+                                        ),
+                                      ],
+                                    ],
                                   ),
-                                ],
-                              ),
+                                ),
+                              ],
                             ),
-                            Transform.translate(
-                              offset: const Offset(0, -16),
-                              child: Row(
-                                mainAxisAlignment: MainAxisAlignment.end,
-                                children: [
-                                  _LikeButton(restaurant: restaurant),
-                                  const SizedBox(width: 8),
-                                  IconButton(
-                                    tooltip: 'Share',
-                                    onPressed: () => Share.share('Check out ${restaurant.name} on JeeviFoodie'),
-                                    icon: const Icon(Icons.share_rounded),
-                                    style: IconButton.styleFrom(backgroundColor: Colors.grey.shade100),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            const SizedBox(height: 0),
+                            const SizedBox(height: 18),
                             Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
                               children: [
                                 _InfoChip(icon: Icons.star_rounded, label: restaurant.rating.toStringAsFixed(1)),
-                                const SizedBox(width: 18),
-                                _InfoChip(icon: Icons.location_on_rounded, label: restaurant.distanceKm != null ? '${restaurant.distanceKm!.toStringAsFixed(1)} km' : 'Nearby'),
-                                const SizedBox(width: 18),
+                                const SizedBox(width: 28),
+                                _InfoChip(
+                                  icon: Icons.location_on_rounded,
+                                  label: (restaurant.address ?? '').trim().isNotEmpty
+                                      ? restaurant.address!.trim()
+                                      : (restaurant.distanceKm != null ? '${restaurant.distanceKm!.toStringAsFixed(1)} km' : 'Location unavailable'),
+                                ),
+                                const SizedBox(width: 28),
                                 _InfoChip(icon: Icons.schedule_rounded, label: '${restaurant.prepTimeMin}-${restaurant.prepTimeMax} min'),
                               ],
                             ),
