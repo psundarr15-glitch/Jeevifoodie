@@ -159,6 +159,7 @@ class _ItemCard extends StatefulWidget {
 class _ItemCardState extends State<_ItemCard> {
   late bool _liked = widget.item.likedByMe;
   bool _toggling = false;
+  bool _addedToCart = false;
 
   Future<void> _toggleLike() async {
     if (_toggling) return;
@@ -179,13 +180,20 @@ class _ItemCardState extends State<_ItemCard> {
     final t = AppLocalizations.of(context)!;
     const fallbackImage = 'https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=200&h=200&fit=crop';
 
-    return GestureDetector(
-      onTap: () => showModalBottomSheet(
+    Future<void> openItem() async {
+      final added = await showModalBottomSheet<bool>(
         context: context,
         isScrollControlled: true,
         shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
         builder: (_) => ItemDetailSheet(item: item),
-      ),
+      );
+      if (mounted && added == true) {
+        setState(() => _addedToCart = true);
+      }
+    }
+
+    return GestureDetector(
+      onTap: openItem,
       child: Container(
         decoration: BoxDecoration(
           color: AppTheme.surface(context),
@@ -277,7 +285,25 @@ class _ItemCardState extends State<_ItemCard> {
                     ),
                   ],
                   const SizedBox(height: 4),
-                  Text('₹${item.price.toStringAsFixed(0)}', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+                  Row(
+                    children: [
+                      Text('₹${item.price.toStringAsFixed(0)}', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+                      if (_addedToCart) ...[
+                        const SizedBox(width: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                          decoration: BoxDecoration(
+                            color: Colors.green.withOpacity(.10),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: const Text(
+                            'ADDED',
+                            style: TextStyle(color: Colors.green, fontSize: 9.5, fontWeight: FontWeight.w900),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
                 ],
               ),
             ),
