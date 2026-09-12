@@ -204,16 +204,7 @@ class _ModernHeader extends StatelessWidget {
 
     return Container(
       padding: const EdgeInsets.fromLTRB(18, 0, 18, 48),
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          colors: [
-            AppTheme.primary,
-            AppTheme.primaryDark,
-          ],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-      ),
+      decoration: const BoxDecoration(gradient: AppTheme.primaryGradient),
       child: SafeArea(
         bottom: false,
         child: Column(
@@ -289,20 +280,14 @@ class _ModernHeader extends StatelessWidget {
                 padding: const EdgeInsets.symmetric(horizontal: 15),
                 decoration: BoxDecoration(
                   color: AppTheme.surface(context),
-                  borderRadius: BorderRadius.circular(17),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(.12),
-                      blurRadius: 18,
-                      offset: const Offset(0, 7),
-                    ),
-                  ],
+                  borderRadius: BorderRadius.circular(AppTheme.radiusLg),
+                  boxShadow: AppTheme.shadowElevated(context),
                 ),
                 child: Row(
                   children: [
                     Icon(
                       Icons.search_rounded,
-                      color: Colors.grey.shade500,
+                      color: AppTheme.textSecondary(context),
                       size: 23,
                     ),
                     const SizedBox(width: 11),
@@ -312,7 +297,7 @@ class _ModernHeader extends StatelessWidget {
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(
-                          color: Colors.grey.shade500,
+                          color: AppTheme.textSecondary(context),
                           fontSize: 13.5,
                         ),
                       ),
@@ -321,12 +306,12 @@ class _ModernHeader extends StatelessWidget {
                       height: 32,
                       width: 32,
                       decoration: BoxDecoration(
-                        color: AppTheme.primary.withOpacity(.09),
-                        borderRadius: BorderRadius.circular(10),
+                        gradient: AppTheme.goldGradient,
+                        borderRadius: BorderRadius.circular(AppTheme.radiusSm),
                       ),
                       child: const Icon(
                         Icons.tune_rounded,
-                        color: AppTheme.primary,
+                        color: Colors.white,
                         size: 18,
                       ),
                     ),
@@ -361,9 +346,11 @@ class _SectionHeader extends StatelessWidget {
         Expanded(
           child: Text(
             title,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 19,
               fontWeight: FontWeight.w800,
+              color: AppTheme.textPrimary(context),
+              letterSpacing: -0.3,
             ),
           ),
         ),
@@ -414,8 +401,12 @@ class _LocationSectionHeader extends StatelessWidget {
           height: 38,
           width: 38,
           decoration: BoxDecoration(
-            color: AppTheme.primary.withOpacity(.10),
-            borderRadius: BorderRadius.circular(12),
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [AppTheme.primary.withOpacity(.16), AppTheme.primary.withOpacity(.07)],
+            ),
+            borderRadius: BorderRadius.circular(AppTheme.radiusMd),
           ),
           child: const Icon(
             Icons.near_me_rounded,
@@ -431,16 +422,17 @@ class _LocationSectionHeader extends StatelessWidget {
             children: [
               Text(
                 l10n.nearbyStores,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.w800,
+                  color: AppTheme.textPrimary(context),
                 ),
               ),
               const SizedBox(height: 2),
               Text(
                 l10n.nearbyStoresSubtitle,
                 style: TextStyle(
-                  color: Colors.grey.shade600,
+                  color: AppTheme.textSecondary(context),
                   fontSize: 11.5,
                 ),
               ),
@@ -457,7 +449,7 @@ class _LocationSectionHeader extends StatelessWidget {
             ),
             decoration: BoxDecoration(
               color: AppTheme.primary.withOpacity(.09),
-              borderRadius: BorderRadius.circular(20),
+              borderRadius: BorderRadius.circular(AppTheme.radiusPill),
             ),
             child: const Icon(
               Icons.arrow_forward_rounded,
@@ -941,6 +933,7 @@ class _ModernCategoryItem extends StatelessWidget {
                               .withOpacity(.04),
                         ],
                 ),
+                boxShadow: isMore ? AppTheme.shadowColored(AppTheme.primary, opacity: 0.3, blur: 14, offset: const Offset(0, 6)) : null,
               ),
               child: Container(
                 decoration: BoxDecoration(
@@ -980,9 +973,10 @@ class _ModernCategoryItem extends StatelessWidget {
               overflow:
                   TextOverflow.ellipsis,
               textAlign: TextAlign.center,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 11.5,
                 fontWeight: FontWeight.w600,
+                color: AppTheme.textPrimary(context),
               ),
             ),
           ],
@@ -1119,7 +1113,7 @@ class _ModernRestaurantCardState
                 ClipRRect(
                   borderRadius:
                       BorderRadius.circular(
-                    17,
+                    AppTheme.radiusLg,
                   ),
                   child: Image.network(
                     restaurant.image
@@ -1269,10 +1263,11 @@ class _ModernRestaurantCardState
               maxLines: 1,
               overflow:
                   TextOverflow.ellipsis,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 15,
                 fontWeight:
                     FontWeight.w800,
+                color: AppTheme.textPrimary(context),
               ),
             ),
 
@@ -1284,7 +1279,7 @@ class _ModernRestaurantCardState
               overflow:
                   TextOverflow.ellipsis,
               style: TextStyle(
-                color: Colors.grey.shade600,
+                color: AppTheme.textSecondary(context),
                 fontSize: 11.5,
               ),
             ),
@@ -1296,7 +1291,7 @@ class _ModernRestaurantCardState
                 Icon(
                   Icons.access_time_rounded,
                   size: 14,
-                  color: Colors.grey.shade500,
+                  color: AppTheme.textSecondary(context),
                 ),
                 const SizedBox(width: 4),
                 Text(
@@ -1309,10 +1304,11 @@ class _ModernRestaurantCardState
                         .toString(),
                   ),
                   style:
-                      const TextStyle(
+                      TextStyle(
                     fontSize: 10.5,
                     fontWeight:
                         FontWeight.w600,
+                    color: AppTheme.textPrimary(context),
                   ),
                 ),
                 const SizedBox(width: 6),
@@ -1429,7 +1425,7 @@ class _ModernFoodCard
                 ClipRRect(
                   borderRadius:
                       BorderRadius.circular(
-                    17,
+                    AppTheme.radiusLg,
                   ),
                   child: Image.network(
                     item.image?.isNotEmpty ==
@@ -1514,10 +1510,11 @@ class _ModernFoodCard
               maxLines: 1,
               overflow:
                   TextOverflow.ellipsis,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 13.5,
                 fontWeight:
                     FontWeight.w800,
+                color: AppTheme.textPrimary(context),
               ),
             ),
 
@@ -1530,7 +1527,7 @@ class _ModernFoodCard
                     TextOverflow.ellipsis,
                 style: TextStyle(
                   color:
-                      Colors.grey.shade600,
+                      AppTheme.textSecondary(context),
                   fontSize: 10.5,
                 ),
               ),
@@ -1662,7 +1659,7 @@ class _ModernDealCard
           const EdgeInsets.all(15),
       decoration: BoxDecoration(
         borderRadius:
-            BorderRadius.circular(18),
+            BorderRadius.circular(AppTheme.radiusLg),
         gradient: LinearGradient(
           colors: [
             AppTheme.primary
@@ -1691,12 +1688,13 @@ class _ModernDealCard
                 ),
                 decoration:
                     BoxDecoration(
-                  color:
-                      AppTheme.primary,
+                  gradient:
+                      AppTheme.primaryGradient,
                   borderRadius:
                       BorderRadius.circular(
-                    7,
+                    AppTheme.radiusSm,
                   ),
+                  boxShadow: AppTheme.shadowColored(AppTheme.primary, opacity: 0.25, blur: 10, offset: const Offset(0, 3)),
                 ),
                 child: Text(
                   label,
@@ -1721,10 +1719,10 @@ class _ModernDealCard
                 ),
                 style: TextStyle(
                   color:
-                      Colors.grey.shade700,
+                      AppTheme.textPrimary(context),
                   fontSize: 11,
                   fontWeight:
-                      FontWeight.w600,
+                      FontWeight.w700,
                 ),
               ),
 
@@ -1735,7 +1733,7 @@ class _ModernDealCard
                 maxLines: 2,
                 style: TextStyle(
                   color:
-                      Colors.grey.shade700,
+                      AppTheme.textSecondary(context),
                   fontSize: 10.5,
                 ),
               ),
@@ -1777,12 +1775,7 @@ class _HomeLoading extends StatelessWidget {
           height: 210,
           decoration:
               const BoxDecoration(
-            gradient: LinearGradient(
-              colors: [
-                AppTheme.primary,
-                AppTheme.primaryDark,
-              ],
-            ),
+            gradient: AppTheme.primaryGradient,
           ),
         ),
         Transform.translate(
@@ -1901,12 +1894,13 @@ class _HomeError extends StatelessWidget {
 
             const SizedBox(height: 18),
 
-            const Text(
+            Text(
               'Something went wrong',
               style: TextStyle(
                 fontSize: 18,
                 fontWeight:
                     FontWeight.w800,
+                color: AppTheme.textPrimary(context),
               ),
             ),
 
@@ -1921,40 +1915,46 @@ class _HomeError extends StatelessWidget {
                   TextOverflow.ellipsis,
               style: TextStyle(
                 color:
-                    Colors.grey.shade600,
+                    AppTheme.textSecondary(context),
                 fontSize: 12.5,
               ),
             ),
 
             const SizedBox(height: 18),
 
-            ElevatedButton.icon(
-              onPressed: onRetry,
-              icon: const Icon(
-                Icons.refresh_rounded,
-                size: 18,
+            Container(
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(AppTheme.radiusLg),
+                boxShadow: AppTheme.shadowColored(AppTheme.primary),
               ),
-              label: const Text(
-                'Try Again',
-              ),
-              style:
-                  ElevatedButton.styleFrom(
-                backgroundColor:
-                    AppTheme.primary,
-                foregroundColor:
-                    Colors.white,
-                elevation: 0,
-                padding:
-                    const EdgeInsets
-                        .symmetric(
-                  horizontal: 20,
-                  vertical: 12,
+              child: ElevatedButton.icon(
+                onPressed: onRetry,
+                icon: const Icon(
+                  Icons.refresh_rounded,
+                  size: 18,
                 ),
-                shape:
-                    RoundedRectangleBorder(
-                  borderRadius:
-                      BorderRadius.circular(
-                    12,
+                label: const Text(
+                  'Try Again',
+                ),
+                style:
+                    ElevatedButton.styleFrom(
+                  backgroundColor:
+                      AppTheme.primary,
+                  foregroundColor:
+                      Colors.white,
+                  elevation: 0,
+                  padding:
+                      const EdgeInsets
+                          .symmetric(
+                    horizontal: 20,
+                    vertical: 12,
+                  ),
+                  shape:
+                      RoundedRectangleBorder(
+                    borderRadius:
+                        BorderRadius.circular(
+                      AppTheme.radiusLg,
+                    ),
                   ),
                 ),
               ),

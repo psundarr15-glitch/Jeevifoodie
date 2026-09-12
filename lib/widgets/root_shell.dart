@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../state/app_state.dart';
 import '../l10n/app_localizations.dart';
+import '../theme.dart';
 import '../screens/home/home_screen.dart';
 import '../screens/search/search_screen.dart';
 import '../screens/cart/cart_screen.dart';
@@ -34,11 +35,14 @@ class _RootShellState extends State<RootShell> {
     return Scaffold(
       body: IndexedStack(index: _index, children: _tabs),
       bottomNavigationBar: DecoratedBox(
-        decoration: BoxDecoration(color: Theme.of(context).cardColor, boxShadow: const [BoxShadow(color: Color(0x16000000), blurRadius: 20, offset: Offset(0, -5))]),
+        decoration: BoxDecoration(
+          color: AppTheme.surface(context),
+          boxShadow: AppTheme.shadowElevated(context),
+        ),
         child: SafeArea(
           top: false,
           child: SizedBox(
-            height: 78,
+            height: 80,
             child: Row(
               children: List.generate(items.length, (i) {
                 final selected = _index == i;
@@ -48,17 +52,47 @@ class _RootShellState extends State<RootShell> {
                     onTap: () => setState(() => _index = i),
                     child: Center(
                       child: AnimatedContainer(
-                        duration: const Duration(milliseconds: 180),
-                        width: 58,
-                        height: 58,
-                        decoration: BoxDecoration(color: selected ? const Color(0xFFFFEEF1) : Colors.transparent, borderRadius: BorderRadius.circular(18)),
+                        duration: const Duration(milliseconds: 200),
+                        curve: Curves.easeOut,
+                        width: 60,
+                        height: 60,
+                        decoration: BoxDecoration(
+                          gradient: selected
+                              ? LinearGradient(
+                                  begin: Alignment.topLeft,
+                                  end: Alignment.bottomRight,
+                                  colors: [AppTheme.primary.withOpacity(0.14), AppTheme.primary.withOpacity(0.07)],
+                                )
+                              : null,
+                          borderRadius: BorderRadius.circular(AppTheme.radiusLg),
+                        ),
                         child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
                           Stack(clipBehavior: Clip.none, children: [
-                            Icon(selected ? item.$1 : item.$2, size: 23, color: selected ? const Color(0xFFF22549) : const Color(0xFF697386)),
-                            if (i == 4 && cartCount > 0) Positioned(right: -8, top: -8, child: Container(padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2), decoration: BoxDecoration(color: const Color(0xFFF22549), borderRadius: BorderRadius.circular(10)), child: Text('$cartCount', style: const TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.w900))))
+                            Icon(selected ? item.$1 : item.$2, size: 23, color: selected ? AppTheme.primary : AppTheme.muted),
+                            if (i == 4 && cartCount > 0)
+                              Positioned(
+                                right: -8,
+                                top: -8,
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                                  decoration: BoxDecoration(
+                                    gradient: AppTheme.goldGradient,
+                                    borderRadius: BorderRadius.circular(AppTheme.radiusPill),
+                                    boxShadow: AppTheme.shadowColored(AppTheme.gold, opacity: 0.5, blur: 8, offset: const Offset(0, 2)),
+                                  ),
+                                  child: Text('$cartCount', style: const TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.w900)),
+                                ),
+                              )
                           ]),
                           const SizedBox(height: 4),
-                          Text(item.$3, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 10.5, fontWeight: selected ? FontWeight.w800 : FontWeight.w600, color: selected ? const Color(0xFFF22549) : const Color(0xFF697386))),
+                          Text(item.$3,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                fontSize: 10.5,
+                                fontWeight: selected ? FontWeight.w800 : FontWeight.w600,
+                                color: selected ? AppTheme.primary : AppTheme.muted,
+                              )),
                         ]),
                       ),
                     ),

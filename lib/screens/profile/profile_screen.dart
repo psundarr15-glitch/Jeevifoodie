@@ -81,15 +81,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
               Container(
                 padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
-                  gradient: const LinearGradient(colors: [AppTheme.primary, AppTheme.primaryDark]),
-                  borderRadius: BorderRadius.circular(26),
-                  boxShadow: [
-                    BoxShadow(
-                      color: AppTheme.primary.withOpacity(.22),
-                      blurRadius: 24,
-                      offset: const Offset(0, 10),
-                    ),
-                  ],
+                  gradient: AppTheme.primaryGradient,
+                  borderRadius: BorderRadius.circular(AppTheme.radiusXl),
+                  boxShadow: AppTheme.shadowColored(AppTheme.primary, opacity: 0.28, blur: 26, offset: const Offset(0, 12)),
                 ),
                 child: Row(
                   children: [
@@ -115,7 +109,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         children: [
                           const Text('Welcome back', style: TextStyle(color: Colors.white70, fontSize: 12, fontWeight: FontWeight.w600)),
                           const SizedBox(height: 3),
-                          Text(name, style: const TextStyle(color: Colors.white, fontSize: 21, fontWeight: FontWeight.w900)),
+                          Text(name, style: const TextStyle(color: Colors.white, fontSize: 21, fontWeight: FontWeight.w900, letterSpacing: -0.3)),
                           if (u['created_at'] != null)
                             Text('Member since ${_date(u['created_at'])}', style: const TextStyle(color: Colors.white70, fontSize: 11.5)),
                         ],
@@ -159,9 +153,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   icon: const Icon(Icons.logout_rounded),
                   label: Text(t.logout, style: const TextStyle(fontWeight: FontWeight.w800)),
                   style: OutlinedButton.styleFrom(
-                    foregroundColor: Colors.red,
-                    side: BorderSide(color: Colors.red.withOpacity(.3)),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(17)),
+                    foregroundColor: const Color(0xFFE5484D),
+                    side: const BorderSide(color: Color(0x4DE5484D)),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppTheme.radiusLg)),
                   ),
                 ),
               ),
@@ -192,9 +186,10 @@ class _Section extends StatelessWidget {
           Container(
             decoration: BoxDecoration(
               color: AppTheme.surface(context),
-              borderRadius: BorderRadius.circular(20),
-              boxShadow: [BoxShadow(color: Colors.black.withOpacity(.03), blurRadius: 14, offset: const Offset(0, 5))],
+              borderRadius: BorderRadius.circular(AppTheme.radiusXl),
+              boxShadow: AppTheme.shadowSoft(context),
             ),
+            clipBehavior: Clip.antiAlias,
             child: Column(
               children: List.generate(children.length, (i) => Column(
                 children: [
@@ -224,17 +219,24 @@ class _Tile extends StatelessWidget {
       leading: Container(
         width: 42,
         height: 42,
-        decoration: BoxDecoration(color: AppTheme.primary.withOpacity(.07), borderRadius: BorderRadius.circular(13)),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [AppTheme.primary.withOpacity(0.14), AppTheme.primary.withOpacity(0.06)],
+          ),
+          borderRadius: BorderRadius.circular(AppTheme.radiusMd),
+        ),
         child: Icon(icon, color: AppTheme.primary, size: 21),
       ),
-      title: Text(label, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14)),
+      title: Text(label, style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14, color: AppTheme.textPrimary(context))),
       trailing: trailing != null
           ? Container(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-              decoration: BoxDecoration(color: AppTheme.primary.withOpacity(.09), borderRadius: BorderRadius.circular(12)),
+              decoration: BoxDecoration(color: AppTheme.primary.withOpacity(.09), borderRadius: BorderRadius.circular(AppTheme.radiusPill)),
               child: Text(trailing!, style: const TextStyle(color: AppTheme.primary, fontWeight: FontWeight.w900, fontSize: 12)),
             )
-          : const Icon(Icons.chevron_right_rounded, color: Colors.grey),
+          : Icon(Icons.chevron_right_rounded, color: AppTheme.textSecondary(context)),
       onTap: onTap,
     );
   }

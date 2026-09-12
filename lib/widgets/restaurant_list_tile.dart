@@ -47,9 +47,9 @@ class _RestaurantListTileState extends State<RestaurantListTile> {
         onTap: widget.onTap,
         child: Container(
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(18),
+            borderRadius: BorderRadius.circular(AppTheme.radiusXl),
             color: AppTheme.surface(context),
-            boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.06), blurRadius: 10, offset: const Offset(0, 3))],
+            boxShadow: AppTheme.shadowSoft(context),
           ),
           clipBehavior: Clip.antiAlias,
           child: Column(
@@ -64,16 +64,37 @@ class _RestaurantListTileState extends State<RestaurantListTile> {
                     fit: BoxFit.cover,
                     errorBuilder: (_, __, ___) => Image.network(fallbackImage, height: 150, width: double.infinity, fit: BoxFit.cover),
                   ),
+                  // Subtle bottom scrim so any overlaid badges stay legible
+                  // against bright food photography, without darkening the
+                  // whole image.
+                  Positioned(
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    height: 56,
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                          colors: [Colors.black.withOpacity(0), Colors.black.withOpacity(0.28)],
+                        ),
+                      ),
+                    ),
+                  ),
                   Positioned(
                     top: 10,
                     right: 10,
                     child: GestureDetector(
                       onTap: _toggleLike,
-                      child: Icon(
-                        _liked ? Icons.favorite : Icons.favorite_border,
-                        color: _liked ? Colors.green.shade600 : Colors.white,
-                        size: 26,
-                        shadows: const [Shadow(color: Colors.black38, blurRadius: 4)],
+                      child: Container(
+                        padding: const EdgeInsets.all(6),
+                        decoration: BoxDecoration(color: Colors.black.withOpacity(0.28), shape: BoxShape.circle),
+                        child: Icon(
+                          _liked ? Icons.favorite : Icons.favorite_border,
+                          color: _liked ? const Color(0xFF3DDC84) : Colors.white,
+                          size: 20,
+                        ),
                       ),
                     ),
                   ),
@@ -82,9 +103,9 @@ class _RestaurantListTileState extends State<RestaurantListTile> {
                       left: 10,
                       bottom: 10,
                       child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                        decoration: BoxDecoration(color: Colors.black87, borderRadius: BorderRadius.circular(6)),
-                        child: Text(AppLocalizations.of(context)!.closedLabel, style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold)),
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                        decoration: BoxDecoration(color: Colors.black.withOpacity(0.55), borderRadius: BorderRadius.circular(AppTheme.radiusPill)),
+                        child: Text(AppLocalizations.of(context)!.closedLabel, style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w700)),
                       ),
                     ),
                   if (restaurant.discountLabel != null)
@@ -92,9 +113,13 @@ class _RestaurantListTileState extends State<RestaurantListTile> {
                       left: 10,
                       top: 10,
                       child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                        decoration: BoxDecoration(color: AppTheme.primary, borderRadius: BorderRadius.circular(6)),
-                        child: Text(restaurant.discountLabel!, style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold)),
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                        decoration: BoxDecoration(
+                          gradient: AppTheme.primaryGradient,
+                          borderRadius: BorderRadius.circular(AppTheme.radiusPill),
+                          boxShadow: AppTheme.shadowColored(AppTheme.primary, opacity: 0.4, blur: 10, offset: const Offset(0, 3)),
+                        ),
+                        child: Text(restaurant.discountLabel!, style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w800)),
                       ),
                     ),
                 ],
@@ -108,28 +133,40 @@ class _RestaurantListTileState extends State<RestaurantListTile> {
                       restaurant.name,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 19, color: AppTheme.textPrimary(context)),
+                      style: TextStyle(fontWeight: FontWeight.w800, fontSize: 18, color: AppTheme.textPrimary(context), letterSpacing: -0.2),
                     ),
-                    const SizedBox(height: 6),
+                    const SizedBox(height: 7),
                     Row(
                       children: [
-                        const Icon(Icons.star, color: AppTheme.gold, size: 18),
-                        const SizedBox(width: 4),
-                        Text(restaurant.rating.toStringAsFixed(1), style: TextStyle(fontSize: 15, color: AppTheme.textPrimary(context))),
-                        Text('  |  ', style: TextStyle(color: AppTheme.textSecondary(context))),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: AppTheme.gold.withOpacity(0.15),
+                            borderRadius: BorderRadius.circular(AppTheme.radiusSm),
+                          ),
+                          child: Row(mainAxisSize: MainAxisSize.min, children: [
+                            const Icon(Icons.star, color: AppTheme.gold, size: 14),
+                            const SizedBox(width: 3),
+                            Text(restaurant.rating.toStringAsFixed(1),
+                                style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: AppTheme.textPrimary(context))),
+                          ]),
+                        ),
+                        const SizedBox(width: 8),
+                        Icon(Icons.access_time_rounded, size: 14, color: AppTheme.textSecondary(context)),
+                        const SizedBox(width: 3),
                         Text(
                           AppLocalizations.of(context)!.prepTimeRange(restaurant.prepTimeMin.toString(), restaurant.prepTimeMax.toString()),
-                          style: TextStyle(fontSize: 15, color: AppTheme.textPrimary(context)),
+                          style: TextStyle(fontSize: 13.5, color: AppTheme.textSecondary(context), fontWeight: FontWeight.w500),
                         ),
                       ],
                     ),
                     if ((restaurant.cuisine ?? '').isNotEmpty) ...[
-                      const SizedBox(height: 4),
+                      const SizedBox(height: 5),
                       Text(
                         restaurant.cuisine!,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: TextStyle(color: AppTheme.textSecondary(context), fontSize: 14),
+                        style: TextStyle(color: AppTheme.textSecondary(context), fontSize: 13.5),
                       ),
                     ],
                   ],
