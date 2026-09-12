@@ -4,6 +4,7 @@ class Restaurant {
   final String? cuisine;
   final String? description;
   final String? image;
+  final String? logo;
   final double rating;
   final int ratingCount;
   final String? phone;
@@ -22,6 +23,7 @@ class Restaurant {
     this.cuisine,
     this.description,
     this.image,
+    this.logo,
     this.rating = 0,
     this.ratingCount = 0,
     this.phone,
@@ -41,6 +43,7 @@ class Restaurant {
         cuisine: j['cuisine']?.toString(),
         description: j['description']?.toString(),
         image: j['image']?.toString(),
+        logo: j['logo']?.toString() ?? j['logo_url']?.toString(),
         rating: double.tryParse(j['rating']?.toString() ?? '') ?? 0,
         ratingCount: int.tryParse(j['rating_count']?.toString() ?? '') ?? 0,
         phone: j['phone']?.toString(),
@@ -60,6 +63,7 @@ class Restaurant {
         cuisine: cuisine,
         description: description,
         image: image,
+        logo: logo,
         rating: rating,
         ratingCount: ratingCount,
         phone: phone,
