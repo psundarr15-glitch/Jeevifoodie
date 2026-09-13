@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
 import '../../services/customer_service.dart';
@@ -57,9 +58,17 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppTheme.scaffoldBg(context),
-      body: RefreshIndicator(
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: const SystemUiOverlayStyle(
+        statusBarColor: Colors.transparent,
+        statusBarIconBrightness: Brightness.light,
+        statusBarBrightness: Brightness.dark,
+        systemNavigationBarColor: Colors.transparent,
+        systemNavigationBarIconBrightness: Brightness.dark,
+      ),
+      child: Scaffold(
+        backgroundColor: AppTheme.scaffoldBg(context),
+        body: RefreshIndicator(
         color: AppTheme.primary,
         onRefresh: _refresh,
         child: FutureBuilder<HomeData>(
@@ -159,6 +168,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
                           _RestaurantHorizontalList(
                             restaurants: data.newRestaurants,
+                            isNew: true,
                           ),
                         ],
 
@@ -988,9 +998,11 @@ class _ModernCategoryItem extends StatelessWidget {
 
 class _RestaurantHorizontalList extends StatelessWidget {
   final List restaurants;
+  final bool isNew;
 
   const _RestaurantHorizontalList({
     required this.restaurants,
+    this.isNew = false,
   });
 
   @override
@@ -1013,6 +1025,7 @@ class _RestaurantHorizontalList extends StatelessWidget {
 
           return _ModernRestaurantCard(
             restaurant: restaurant,
+            isNew: isNew,
             onTap: () {
               Navigator.of(context).push(
                 MaterialPageRoute(
@@ -1034,10 +1047,12 @@ class _RestaurantHorizontalList extends StatelessWidget {
 class _ModernRestaurantCard
     extends StatefulWidget {
   final dynamic restaurant;
+  final bool isNew;
   final VoidCallback onTap;
 
   const _ModernRestaurantCard({
     required this.restaurant,
+    this.isNew = false,
     required this.onTap,
   });
 
@@ -1130,6 +1145,28 @@ class _ModernRestaurantCardState
                     ),
                   ),
                 ),
+
+                if (widget.isNew)
+                  Positioned(
+                    top: 9,
+                    left: 50,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
+                      decoration: BoxDecoration(
+                        color: AppTheme.primary,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: const Text(
+                        'NEW',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 10,
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: .6,
+                        ),
+                      ),
+                    ),
+                  ),
 
                 Positioned(
                   top: 9,
