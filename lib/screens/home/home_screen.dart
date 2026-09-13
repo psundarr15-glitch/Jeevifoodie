@@ -189,7 +189,6 @@ class _HomeScreenState extends State<HomeScreen> {
             );
           },
         ),
-        ),
       ),
     );
   }
@@ -329,6 +328,7 @@ class _ModernHeader extends StatelessWidget {
             ),
           ],
         ),
+      ),
     );
   }
 }
