@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
 
 import '../../services/customer_service.dart';
 import '../../models/menu_item.dart';
@@ -10,11 +9,6 @@ import '../restaurant/restaurant_list_screen.dart';
 import '../search/search_screen.dart';
 import '../../widgets/notification_bell.dart';
 import '../../l10n/app_localizations.dart';
-import '../../services/cart_service.dart';
-import '../../models/cart_item.dart';
-import '../../state/app_state.dart';
-import '../../utils/cart_restaurant_guard.dart';
-import '../../widgets/quantity_stepper.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -147,22 +141,6 @@ class _HomeScreenState extends State<HomeScreen> {
                           restaurants: data.restaurants,
                         ),
 
-                        if (data.newRestaurants.isNotEmpty) ...[
-                          const SizedBox(height: 32),
-
-                          _SectionHeader(
-                            title: 'New Restaurants',
-                            onTap: _browseAll,
-                          ),
-
-                          const SizedBox(height: 14),
-
-                          _RestaurantHorizontalList(
-                            restaurants: data.newRestaurants,
-                            isNew: true,
-                          ),
-                        ],
-
                         if (data.popularItems.isNotEmpty) ...[
                           const SizedBox(height: 32),
 
@@ -179,6 +157,21 @@ class _HomeScreenState extends State<HomeScreen> {
                           ),
                         ],
 
+                        if (data.coupons.isNotEmpty) ...[
+                          const SizedBox(height: 32),
+
+                          _SectionHeader(
+                            title:
+                                AppLocalizations.of(context)!.bestDealsForYou,
+                            onTap: () {},
+                          ),
+
+                          const SizedBox(height: 14),
+
+                          _DealsList(
+                            coupons: data.coupons,
+                          ),
+                        ],
 
                         const SizedBox(height: 30),
                       ],
@@ -584,37 +577,27 @@ class _ModernBannerCarouselState
                 clipBehavior:
                     Clip.antiAlias,
                 child: Stack(
+                  fit: StackFit.expand,
                   children: [
-                    Positioned(
-                      right: -25,
-                      top: -10,
-                      bottom: -10,
-                      child: Opacity(
-                        opacity: .95,
-                        child: ClipRRect(
-                          borderRadius:
-                              BorderRadius.circular(
-                            30,
-                          ),
-                          child: Image.network(
-                            foodImage,
-                            width: 190,
-                            fit: BoxFit.cover,
-                          ),
-                        ),
-                      ),
+                    // Full-width banner image — no blank half.
+                    Image.network(
+                      foodImage,
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) =>
+                          const SizedBox.expand(),
                     ),
 
+                    // Dark overlay keeps the offer text and Order Now button readable.
                     Positioned.fill(
                       child: DecoratedBox(
-                        decoration:
-                            BoxDecoration(
-                          gradient:
-                              LinearGradient(
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.centerLeft,
+                            end: Alignment.centerRight,
                             colors: [
-                              Colors.black
-                                  .withOpacity(.08),
-                              Colors.transparent,
+                              Colors.black.withOpacity(.72),
+                              Colors.black.withOpacity(.40),
+                              Colors.black.withOpacity(.12),
                             ],
                           ),
                         ),
@@ -999,11 +982,9 @@ class _ModernCategoryItem extends StatelessWidget {
 
 class _RestaurantHorizontalList extends StatelessWidget {
   final List restaurants;
-  final bool isNew;
 
   const _RestaurantHorizontalList({
     required this.restaurants,
-    this.isNew = false,
   });
 
   @override
@@ -1026,7 +1007,6 @@ class _RestaurantHorizontalList extends StatelessWidget {
 
           return _ModernRestaurantCard(
             restaurant: restaurant,
-            isNew: isNew,
             onTap: () {
               Navigator.of(context).push(
                 MaterialPageRoute(
@@ -1049,12 +1029,10 @@ class _ModernRestaurantCard
     extends StatefulWidget {
   final dynamic restaurant;
   final VoidCallback onTap;
-  final bool isNew;
 
   const _ModernRestaurantCard({
     required this.restaurant,
     required this.onTap,
-    this.isNew = false,
   });
 
   @override
@@ -1122,25 +1100,6 @@ class _ModernRestaurantCardState
           children: [
             Stack(
               children: [
-                if (widget.isNew)
-                  Positioned(
-                    top: 9,
-                    left: 9,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: AppTheme.primary,
-                        borderRadius: BorderRadius.circular(8),
-                        boxShadow: const [
-                          BoxShadow(blurRadius: 6, offset: Offset(0, 2), color: Colors.black26),
-                        ],
-                      ),
-                      child: const Text(
-                        'NEW',
-                        style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.w800, letterSpacing: .5),
-                      ),
-                    ),
-                  ),
                 ClipRRect(
                   borderRadius:
                       BorderRadius.circular(
@@ -1167,7 +1126,7 @@ class _ModernRestaurantCardState
                 ),
 
                 Positioned(
-                  top: widget.isNew ? 46 : 9,
+                  top: 9,
                   left: 9,
                   child: GestureDetector(
                     onTap: _toggleLike,
@@ -1390,84 +1349,37 @@ class _ModernRestaurantCardState
    POPULAR FOOD
 ============================================================ */
 
-class _PopularFoodList extends StatefulWidget {
+class _PopularFoodList extends StatelessWidget {
   final List<MenuItem> items;
-  const _PopularFoodList({required this.items});
-  @override State<_PopularFoodList> createState() => _PopularFoodListState();
-}
 
-class _PopularFoodListState extends State<_PopularFoodList> {
-  final Map<int, int> _qty = {};
-  final Set<int> _busy = {};
+  const _PopularFoodList({
+    required this.items,
+  });
 
-  @override void initState() { super.initState(); _loadCart(); }
-
-  Future<void> _loadCart() async {
-    try {
-      final cart = await CartService.view();
-      if (!mounted) return;
-      setState(() {
-        // Replace the local map with the server cart. Do not merge it.
-        // After a restaurant reset, old menu-item quantities must disappear
-        // immediately; otherwise Popular Items keeps showing stale controls.
-        _qty.clear();
-        for (final item in cart.items) {
-          _qty[item.menuItemId] = item.quantity;
-        }
-      });
-    } catch (_) {}
-  }
-
-  Future<void> _add(MenuItem item) async {
-    if (_busy.contains(item.id)) return;
-    setState(() => _busy.add(item.id));
-    try {
-      final ok = await CartRestaurantGuard.add(context, menuItemId: item.id, restaurantId: item.restaurantId);
-      if (ok) {
-        await _loadCart();
-        if (mounted) context.read<AppState>().refreshCartCount();
-      }
-    } finally { if (mounted) setState(() => _busy.remove(item.id)); }
-  }
-
-  Future<void> _change(MenuItem item, int delta) async {
-    final current = _qty[item.id] ?? 0;
-    if (current <= 0) return;
-    setState(() => _busy.add(item.id));
-    try {
-      final cart = await CartService.view();
-      CartItem? row;
-      for (final x in cart.items) {
-        if (x.menuItemId == item.id) { row = x; break; }
-      }
-      if (row != null) {
-        await CartService.updateQuantity(cartItemId: row.id, quantity: current + delta);
-        await _loadCart();
-        if (mounted) context.read<AppState>().refreshCartCount();
-      }
-    } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Could not update cart: $e')));
-    } finally { if (mounted) setState(() => _busy.remove(item.id)); }
-  }
-
-  @override Widget build(BuildContext context) {
+  @override
+  Widget build(BuildContext context) {
     return SizedBox(
-      height: 245,
+      height: 215,
       child: ListView.separated(
-        scrollDirection: Axis.horizontal,
-        itemCount: widget.items.length,
-        separatorBuilder: (_, __) => const SizedBox(width: 14),
+        scrollDirection:
+            Axis.horizontal,
+        itemCount: items.length,
+        separatorBuilder: (_, __) =>
+            const SizedBox(width: 14),
         itemBuilder: (_, i) {
-          final item = widget.items[i];
-          final q = _qty[item.id] ?? 0;
           return _ModernFoodCard(
-            item: item,
-            quantity: q,
-            busy: _busy.contains(item.id),
-            onAdd: () => _add(item),
-            onDecrease: () => _change(item, -1),
-            onIncrease: () => _change(item, 1),
-            onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => RestaurantMenuScreen(restaurantId: item.restaurantId))),
+            item: items[i],
+            onTap: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) =>
+                      RestaurantMenuScreen(
+                    restaurantId:
+                        items[i].restaurantId,
+                  ),
+                ),
+              );
+            },
           );
         },
       ),
@@ -1479,13 +1391,11 @@ class _ModernFoodCard
     extends StatelessWidget {
   final MenuItem item;
   final VoidCallback onTap;
-  final int quantity;
-  final bool busy;
-  final VoidCallback onAdd;
-  final VoidCallback onDecrease;
-  final VoidCallback onIncrease;
 
-  const _ModernFoodCard({required this.item, required this.onTap, required this.quantity, required this.busy, required this.onAdd, required this.onDecrease, required this.onIncrease});
+  const _ModernFoodCard({
+    required this.item,
+    required this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -1598,52 +1508,20 @@ class _ModernFoodCard
               ),
             ),
 
-            // Cart controls must not depend on restaurantName being present.
-            // The popular-items API can return a menu item without the optional
-            // restaurantName field, but restaurantId is still available for the
-            // cart guard.
-            if (quantity == 0)
-              Align(
-                alignment: Alignment.centerRight,
-                child: SizedBox(
-                  height: 34,
-                  child: IconButton.filled(
-                    onPressed: busy ? null : onAdd,
-                    icon: const Icon(Icons.add, size: 18),
-                    padding: EdgeInsets.zero,
-                  ),
-                ),
-              )
-            else
-              Align(
-                alignment: Alignment.centerRight,
-                child: busy
-                    ? const SizedBox(
-                        width: 80,
-                        height: 34,
-                        child: Center(
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        ),
-                      )
-                    : QuantityStepper(
-                        quantity: quantity,
-                        onDecrease: onDecrease,
-                        onIncrease: onIncrease,
-                        compact: true,
-                      ),
-              ),
-
-            const SizedBox(height: 2),
-            if (item.restaurantName != null)
+            if (item.restaurantName != null) ...[
+              const SizedBox(height: 2),
               Text(
                 item.restaurantName!,
                 maxLines: 1,
-                overflow: TextOverflow.ellipsis,
+                overflow:
+                    TextOverflow.ellipsis,
                 style: TextStyle(
-                  color: AppTheme.textSecondary(context),
+                  color:
+                      AppTheme.textSecondary(context),
                   fontSize: 10.5,
                 ),
               ),
+            ],
 
             const SizedBox(height: 4),
 
