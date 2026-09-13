@@ -159,6 +159,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
                           _RestaurantHorizontalList(
                             restaurants: data.newRestaurants,
+                            isNew: true,
                           ),
                         ],
 
@@ -998,9 +999,11 @@ class _ModernCategoryItem extends StatelessWidget {
 
 class _RestaurantHorizontalList extends StatelessWidget {
   final List restaurants;
+  final bool isNew;
 
   const _RestaurantHorizontalList({
     required this.restaurants,
+    this.isNew = false,
   });
 
   @override
@@ -1023,6 +1026,7 @@ class _RestaurantHorizontalList extends StatelessWidget {
 
           return _ModernRestaurantCard(
             restaurant: restaurant,
+            isNew: isNew,
             onTap: () {
               Navigator.of(context).push(
                 MaterialPageRoute(
@@ -1045,10 +1049,12 @@ class _ModernRestaurantCard
     extends StatefulWidget {
   final dynamic restaurant;
   final VoidCallback onTap;
+  final bool isNew;
 
   const _ModernRestaurantCard({
     required this.restaurant,
     required this.onTap,
+    this.isNew = false,
   });
 
   @override
@@ -1116,6 +1122,25 @@ class _ModernRestaurantCardState
           children: [
             Stack(
               children: [
+                if (widget.isNew)
+                  Positioned(
+                    top: 9,
+                    left: 9,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: AppTheme.primary,
+                        borderRadius: BorderRadius.circular(8),
+                        boxShadow: const [
+                          BoxShadow(blurRadius: 6, offset: Offset(0, 2), color: Colors.black26),
+                        ],
+                      ),
+                      child: const Text(
+                        'NEW',
+                        style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.w800, letterSpacing: .5),
+                      ),
+                    ),
+                  ),
                 ClipRRect(
                   borderRadius:
                       BorderRadius.circular(
@@ -1142,7 +1167,7 @@ class _ModernRestaurantCardState
                 ),
 
                 Positioned(
-                  top: 9,
+                  top: widget.isNew ? 46 : 9,
                   left: 9,
                   child: GestureDetector(
                     onTap: _toggleLike,

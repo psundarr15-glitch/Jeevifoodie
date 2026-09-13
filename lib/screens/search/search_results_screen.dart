@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../models/menu_item.dart';
-import '../../models/cart_item.dart';
 import '../../models/restaurant.dart';
 import '../../services/search_service.dart';
 import '../../services/cart_service.dart';
@@ -25,6 +24,78 @@ class _SearchResultsScreenState extends State<SearchResultsScreen> with SingleTi
   late final TabController _tabController = TabController(length: 2, vsync: this);
   late final TextEditingController _searchController = TextEditingController(text: widget.initialQuery);
   late Future<SearchResults> _future = SearchService.search(widget.initialQuery);
+  double? _priceMin;
+  double? _priceMax;
+  bool _priceFilterActive = false;
+
+  Future<void> _openPriceFilter(List<MenuItem> items) async {
+    if (items.isEmpty) return;
+    final prices = items.map((e) => e.price).where((p) => p.isFinite && p >= 0).toList();
+    if (prices.isEmpty) return;
+    final minPrice = prices.reduce((a, b) => a < b ? a : b);
+    final maxPrice = prices.reduce((a, b) => a > b ? a : b);
+    final rangeMax = maxPrice <= minPrice ? minPrice + 1 : maxPrice;
+    double selectedMin = (_priceMin ?? minPrice).clamp(minPrice, rangeMax).toDouble();
+    double selectedMax = (_priceMax ?? maxPrice).clamp(selectedMin, rangeMax).toDouble();
+
+    final result = await showModalBottomSheet<bool>(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+      builder: (sheetContext) => StatefulBuilder(
+        builder: (context, setSheetState) => Padding(
+          padding: EdgeInsets.fromLTRB(20, 12, 20, 20 + MediaQuery.of(context).viewInsets.bottom),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(child: Container(width: 42, height: 4, decoration: BoxDecoration(color: Colors.grey.shade300, borderRadius: BorderRadius.circular(4)))),
+              const SizedBox(height: 18),
+              Row(children: [
+                const Expanded(child: Text('Filter by Price', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800))),
+                if (_priceFilterActive) TextButton(onPressed: () => Navigator.of(sheetContext).pop(false), child: const Text('Clear')),
+              ]),
+              Text('₹${selectedMin.round()}  -  ₹${selectedMax.round()}', style: TextStyle(color: AppTheme.primary, fontSize: 17, fontWeight: FontWeight.w800)),
+              const SizedBox(height: 4),
+              RangeSlider(
+                values: RangeValues(selectedMin, selectedMax),
+                min: minPrice,
+                max: rangeMax,
+                divisions: rangeMax - minPrice > 1 ? (rangeMax - minPrice).round().clamp(1, 100) : 1,
+                labels: RangeLabels('₹${selectedMin.round()}', '₹${selectedMax.round()}'),
+                onChanged: (values) => setSheetState(() { selectedMin = values.start; selectedMax = values.end; }),
+              ),
+              const SizedBox(height: 8),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: () {
+                    _priceMin = selectedMin;
+                    _priceMax = selectedMax;
+                    Navigator.of(sheetContext).pop(true);
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppTheme.primary, foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                  ),
+                  child: const Text('Apply Filter', style: TextStyle(fontWeight: FontWeight.w800)),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+    if (!mounted) return;
+    setState(() {
+      if (result == true) {
+        _priceFilterActive = true;
+      } else if (result == false) {
+        _priceMin = null; _priceMax = null; _priceFilterActive = false;
+      }
+    });
+  }
 
   @override
   void dispose() {
@@ -37,7 +108,12 @@ class _SearchResultsScreenState extends State<SearchResultsScreen> with SingleTi
     final trimmed = query.trim();
     if (trimmed.isEmpty) return;
     SearchService.addRecentSearch(trimmed);
-    setState(() => _future = SearchService.search(trimmed));
+    setState(() {
+      _future = SearchService.search(trimmed);
+      _priceMin = null;
+      _priceMax = null;
+      _priceFilterActive = false;
+    });
   }
 
   @override
@@ -87,21 +163,39 @@ class _SearchResultsScreenState extends State<SearchResultsScreen> with SingleTi
                     return Center(child: Text('${snap.error}'));
                   }
                   final results = snap.data!;
-                  final total = results.items.length + results.restaurants.length;
+                  final filteredItems = results.items.where((item) {
+                    if (!_priceFilterActive || _priceMin == null || _priceMax == null) return true;
+                    return item.price >= _priceMin! && item.price <= _priceMax!;
+                  }).toList();
+                  final total = filteredItems.length + results.restaurants.length;
 
                   return Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-                        child: RichText(
-                          text: TextSpan(
-                            style: DefaultTextStyle.of(context).style,
-                            children: [
-                              TextSpan(text: '$total ', style: const TextStyle(color: AppTheme.primary, fontWeight: FontWeight.bold)),
-                              TextSpan(text: t.resultsFound, style: TextStyle(color: Colors.grey.shade600)),
-                            ],
-                          ),
+                        padding: const EdgeInsets.fromLTRB(16, 6, 10, 6),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: RichText(
+                                text: TextSpan(
+                                  style: DefaultTextStyle.of(context).style,
+                                  children: [
+                                    TextSpan(text: '$total ', style: const TextStyle(color: AppTheme.primary, fontWeight: FontWeight.bold)),
+                                    TextSpan(text: t.resultsFound, style: TextStyle(color: Colors.grey.shade600)),
+                                  ],
+                                ),
+                              ),
+                            ),
+                            TextButton.icon(
+                              onPressed: () => _openPriceFilter(results.items),
+                              icon: Icon(Icons.tune_rounded, size: 19, color: _priceFilterActive ? AppTheme.primary : Colors.grey.shade700),
+                              label: Text(
+                                _priceFilterActive ? 'Price: ₹${_priceMin!.round()}–₹${_priceMax!.round()}' : 'Price',
+                                style: TextStyle(color: _priceFilterActive ? AppTheme.primary : Colors.grey.shade700, fontWeight: FontWeight.w700),
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                       TabBar(
@@ -118,7 +212,7 @@ class _SearchResultsScreenState extends State<SearchResultsScreen> with SingleTi
                         child: TabBarView(
                           controller: _tabController,
                           children: [
-                            _ItemsTab(items: results.items),
+                            _ItemsTab(items: filteredItems),
                             _RestaurantsTab(restaurants: results.restaurants),
                           ],
                         ),
@@ -207,10 +301,6 @@ class _ItemsTabState extends State<_ItemsTab> {
           cartQty: _cartQtyByItem[item.id] ?? 0,
           cartStateReady: _cartLoaded,
           onCartQtyChanged: (qty) => _setCartQty(item.id, qty),
-          onCartReset: () {
-            if (!mounted) return;
-            setState(() => _cartQtyByItem.clear());
-          },
         );
       },
     );
@@ -222,7 +312,6 @@ class _ItemCard extends StatefulWidget {
   final int cartQty;
   final bool cartStateReady;
   final ValueChanged<int> onCartQtyChanged;
-  final VoidCallback onCartReset;
 
   const _ItemCard({
     super.key,
@@ -230,7 +319,6 @@ class _ItemCard extends StatefulWidget {
     required this.cartQty,
     required this.cartStateReady,
     required this.onCartQtyChanged,
-    required this.onCartReset,
   });
 
   @override
@@ -242,126 +330,11 @@ class _ItemCardState extends State<_ItemCard> {
   bool _toggling = false;
   bool _addingToCart = false;
 
-  Future<bool> _confirmCartReset() async {
-    final result = await showDialog<bool>(
-      context: context,
-      barrierDismissible: false,
-      builder: (dialogContext) => Dialog(
-        insetPadding: const EdgeInsets.symmetric(horizontal: 24),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 390),
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(24, 24, 24, 20),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  width: 58,
-                  height: 58,
-                  decoration: BoxDecoration(
-                    color: Colors.orange.withOpacity(.12),
-                    shape: BoxShape.circle,
-                  ),
-                  alignment: Alignment.center,
-                  child: const Icon(
-                    Icons.priority_high_rounded,
-                    color: Colors.orange,
-                    size: 34,
-                  ),
-                ),
-                const SizedBox(height: 18),
-                const Text(
-                  'Are you sure you want to reset?',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: 19,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-                const SizedBox(height: 14),
-                const Text(
-                  'You have items from another restaurant in your cart. If you continue, all previous items will be removed.',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: 14,
-                    height: 1.5,
-                    color: Colors.black54,
-                  ),
-                ),
-                const SizedBox(height: 24),
-                Row(
-                  children: [
-                    Expanded(
-                      child: OutlinedButton(
-                        onPressed: () => Navigator.of(dialogContext).pop(false),
-                        style: OutlinedButton.styleFrom(
-                          minimumSize: const Size.fromHeight(48),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(14),
-                          ),
-                        ),
-                        child: const Text('No'),
-                      ),
-                    ),
-                    const SizedBox(width: 14),
-                    Expanded(
-                      child: ElevatedButton(
-                        onPressed: () => Navigator.of(dialogContext).pop(true),
-                        style: ElevatedButton.styleFrom(
-                          minimumSize: const Size.fromHeight(48),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(14),
-                          ),
-                        ),
-                        child: const Text('Yes'),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-    return result == true;
-  }
-
-  Future<void> _clearCartAndAdd() async {
-    final cart = await CartService.view();
-    for (final cartItem in List<CartItem>.from(cart.items)) {
-      await CartService.updateQuantity(cartItemId: cartItem.id, quantity: 0);
-    }
-
-    // The backend keeps the empty cart row, so verify that its item list is
-    // actually empty before adding the item from the new restaurant.
-    final cleared = await CartService.view();
-    if (cleared.items.isNotEmpty) {
-      throw Exception('Could not reset cart. Please try again.');
-    }
-
-    widget.onCartReset();
-    await CartService.add(menuItemId: widget.item.id, quantity: 1);
-  }
-
   Future<void> _addOneToCart() async {
     if (_addingToCart || !widget.item.isAvailable) return;
     setState(() => _addingToCart = true);
     try {
-      final cart = await CartService.view();
-      final hasOtherRestaurant = cart.items.isNotEmpty &&
-          cart.restaurantId != null &&
-          cart.restaurantId != widget.item.restaurantId;
-
-      if (hasOtherRestaurant) {
-        final confirmed = await _confirmCartReset();
-        if (!confirmed) return;
-        await _clearCartAndAdd();
-      } else {
-        await CartService.add(menuItemId: widget.item.id, quantity: 1);
-      }
-
+      await CartService.add(menuItemId: widget.item.id, quantity: 1);
       if (!mounted) return;
       await context.read<AppState>().refreshCartCount();
       widget.onCartQtyChanged(widget.cartQty > 0 ? widget.cartQty + 1 : 1);
@@ -387,37 +360,6 @@ class _ItemCardState extends State<_ItemCard> {
       if (!mounted) return;
       await context.read<AppState>().refreshCartCount();
       widget.onCartQtyChanged(next);
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(AppLocalizations.of(context)!.couldNotAddItem(e.toString()))),
-        );
-      }
-    } finally {
-      if (mounted) setState(() => _addingToCart = false);
-    }
-  }
-
-  Future<void> _removeFromCart() async {
-    if (_addingToCart || widget.cartQty <= 0) return;
-    setState(() => _addingToCart = true);
-    try {
-      final cart = await CartService.view();
-      final cartItem = cart.items.cast<CartItem?>().firstWhere(
-        (item) => item?.menuItemId == widget.item.id,
-        orElse: () => null,
-      );
-
-      if (cartItem != null) {
-        await CartService.updateQuantity(
-          cartItemId: cartItem.id,
-          quantity: 0,
-        );
-      }
-
-      if (!mounted) return;
-      await context.read<AppState>().refreshCartCount();
-      widget.onCartQtyChanged(0);
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -590,8 +532,8 @@ class _ItemCardState extends State<_ItemCard> {
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               _InlineQtyButton(
-                                icon: qty == 1 ? Icons.delete_outline : Icons.remove,
-                                onTap: qty == 1 ? _removeFromCart : () => _changeCartQty(-1),
+                                icon: Icons.remove,
+                                onTap: qty > 1 ? () => _changeCartQty(-1) : null,
                                 busy: _addingToCart,
                               ),
                               Padding(
