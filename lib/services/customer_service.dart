@@ -9,14 +9,12 @@ class HomeData {
   final List<Category> categories;
   final List<Restaurant> restaurants;
   final List<Restaurant> nearbyStores;
-  final List<Restaurant> newRestaurants;
   final List<MenuItem> popularItems;
   final List<Map<String, dynamic>> coupons;
   HomeData({
     required this.categories,
     required this.restaurants,
     required this.nearbyStores,
-    required this.newRestaurants,
     required this.popularItems,
     required this.coupons,
   });
@@ -66,9 +64,6 @@ class CustomerService {
           .map((e) => Restaurant.fromJson(e as Map<String, dynamic>))
           .toList(),
       nearbyStores: (res['nearby_stores'] as List? ?? [])
-          .map((e) => Restaurant.fromJson(e as Map<String, dynamic>))
-          .toList(),
-      newRestaurants: (res['new_restaurants'] as List? ?? [])
           .map((e) => Restaurant.fromJson(e as Map<String, dynamic>))
           .toList(),
       popularItems: (res['popular_items'] as List? ?? [])

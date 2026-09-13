@@ -16,23 +16,13 @@ class CartScreen extends StatefulWidget {
 class _CartScreenState extends State<CartScreen> {
   late Future<CartSnapshot> _future;
   final Set<int> _busy = {};
-  int? _lastObservedCartCount;
 
   @override void initState() { super.initState(); _load(); }
   void _load() { _future = CartService.view(); }
 
-  void _syncWithAppStateCartCount(int cartCount) {
-    if (_lastObservedCartCount == cartCount) return;
-    _lastObservedCartCount = cartCount;
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
-      setState(_load);
-    });
-  }
-
   Future<void> _qty(CartItem item, int d) async {
     final q = item.quantity + d;
-    if (q < 0) return;
+    if (q < 1) return;
     setState(() => _busy.add(item.id));
     try {
       await CartService.updateQuantity(cartItemId: item.id, quantity: q);
@@ -55,8 +45,6 @@ class _CartScreenState extends State<CartScreen> {
   @override
   Widget build(BuildContext context) {
     final t = AppLocalizations.of(context)!;
-    final cartCount = context.watch<AppState>().cartCount;
-    _syncWithAppStateCartCount(cartCount);
     return Scaffold(
       backgroundColor: AppTheme.scaffoldBg(context),
       appBar: AppBar(

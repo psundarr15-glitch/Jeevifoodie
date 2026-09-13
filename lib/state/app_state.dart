@@ -19,10 +19,7 @@ class AppState extends ChangeNotifier {
     final token = await ApiClient.getToken();
     isLoggedIn = token != null;
     if (isLoggedIn) {
-      await Future.any([
-        refreshCartCount(),
-        Future.delayed(const Duration(seconds: 5)),
-      ]);
+      await refreshCartCount();
       // Re-attach the FCM token now that we have an auth token - covers
       // the case where Firebase got a token before login happened.
       NotificationService.registerCurrentToken();

@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:share_plus/share_plus.dart';
 import '../../services/customer_service.dart';
 import '../../services/cart_service.dart';
 import '../../models/menu_item.dart';
@@ -127,16 +126,13 @@ class _RestaurantMenuScreenState extends State<RestaurantMenuScreen> {
                 slivers: [
                   SliverAppBar(
                     pinned: true,
-                    expandedHeight: 190,
-                    backgroundColor: Colors.white,
-                    foregroundColor: Colors.black87,
+                    expandedHeight: 170,
                     flexibleSpace: FlexibleSpaceBar(
-                      titlePadding: const EdgeInsets.only(left: 16, bottom: 12, right: 16),
-                      title: const SizedBox.shrink(),
+                      title: Text(restaurant.name),
                       background: Stack(
                         fit: StackFit.expand,
                         children: [
-                          restaurant.image != null && restaurant.image!.isNotEmpty
+                          restaurant.image != null
                               ? Image.network(restaurant.image!, fit: BoxFit.cover)
                               : Container(color: AppTheme.primary.withOpacity(0.15)),
                           const DecoratedBox(
@@ -144,7 +140,7 @@ class _RestaurantMenuScreenState extends State<RestaurantMenuScreen> {
                               gradient: LinearGradient(
                                 begin: Alignment.topCenter,
                                 end: Alignment.bottomCenter,
-                                colors: [Colors.transparent, Colors.black26],
+                                colors: [Colors.transparent, Colors.black45],
                               ),
                             ),
                           ),
@@ -160,92 +156,38 @@ class _RestaurantMenuScreenState extends State<RestaurantMenuScreen> {
                   SliverList(
                     delegate: SliverChildListDelegate([
                       Padding(
-                        padding: const EdgeInsets.fromLTRB(16, 14, 16, 8),
+                        padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
                         child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Row(
-                              crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Container(
-                                  width: 76,
-                                  height: 76,
-                                  decoration: BoxDecoration(
-                                    color: Colors.white,
-                                    shape: BoxShape.circle,
-                                    border: Border.all(color: Colors.white, width: 4),
-                                    boxShadow: const [BoxShadow(blurRadius: 12, offset: Offset(0, 5), color: Colors.black12)],
-                                  ),
-                                  clipBehavior: Clip.antiAlias,
-                                  child: restaurant.logo != null && restaurant.logo!.isNotEmpty
-                                      ? Image.network(restaurant.logo!, fit: BoxFit.cover)
-                                      : restaurant.image != null && restaurant.image!.isNotEmpty
-                                          ? Image.network(restaurant.image!, fit: BoxFit.cover)
-                                          : Center(child: Text(restaurant.name.isNotEmpty ? restaurant.name[0].toUpperCase() : 'R', style: const TextStyle(fontSize: 28, fontWeight: FontWeight.w800))),
-                                ),
-                                const SizedBox(width: 12),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                  decoration: BoxDecoration(color: Colors.green.shade600, borderRadius: BorderRadius.circular(4)),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
                                     children: [
-                                      Row(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
-                                        children: [
-                                          Expanded(
-                                            child: Text(
-                                              restaurant.name,
-                                              maxLines: 2,
-                                              overflow: TextOverflow.ellipsis,
-                                              style: const TextStyle(fontSize: 20, height: 1.12, fontWeight: FontWeight.w800),
-                                            ),
-                                          ),
-                                          const SizedBox(width: 8),
-                                          Row(
-                                            mainAxisSize: MainAxisSize.min,
-                                            children: [
-                                              _LikeButton(restaurant: restaurant),
-                                              const SizedBox(width: 4),
-                                              IconButton(
-                                                tooltip: 'Share',
-                                                visualDensity: VisualDensity.compact,
-                                                onPressed: () => Share.share('Check out ${restaurant.name} on JeeviFoodie'),
-                                                icon: const Icon(Icons.share_rounded, size: 21),
-                                                style: IconButton.styleFrom(backgroundColor: Colors.grey.shade100),
-                                              ),
-                                            ],
-                                          ),
-                                        ],
-                                      ),
-                                      if ((restaurant.description ?? '').trim().isNotEmpty) ...[
-                                        const SizedBox(height: 5),
-                                        Text(
-                                          restaurant.description!.trim(),
-                                          maxLines: 2,
-                                          overflow: TextOverflow.ellipsis,
-                                          style: TextStyle(color: Colors.grey.shade600, fontSize: 12.5, height: 1.25),
-                                        ),
-                                      ],
+                                      const Icon(Icons.star, size: 12, color: Colors.white),
+                                      const SizedBox(width: 2),
+                                      Text(restaurant.rating.toStringAsFixed(1), style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold)),
                                     ],
                                   ),
                                 ),
+                                const SizedBox(width: 6),
+                                Text(AppLocalizations.of(context)!.ratingsCountLabel(restaurant.ratingCount.toString()), style: TextStyle(color: Colors.grey.shade600, fontSize: 12)),
+                                const SizedBox(width: 12),
+                                Text(AppLocalizations.of(context)!.prepTimeRange(restaurant.prepTimeMin.toString(), restaurant.prepTimeMax.toString()), style: TextStyle(color: Colors.grey.shade600, fontSize: 12)),
                               ],
                             ),
-                            const SizedBox(height: 18),
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                _InfoChip(icon: Icons.star_rounded, label: restaurant.rating.toStringAsFixed(1)),
-                                const SizedBox(width: 28),
-                                _InfoChip(
-                                  icon: Icons.location_on_rounded,
-                                  label: (restaurant.address ?? '').trim().isNotEmpty
-                                      ? restaurant.address!.trim()
-                                      : (restaurant.distanceKm != null ? '${restaurant.distanceKm!.toStringAsFixed(1)} km' : 'Location unavailable'),
-                                ),
-                                const SizedBox(width: 28),
-                                _InfoChip(icon: Icons.schedule_rounded, label: '${restaurant.prepTimeMin}-${restaurant.prepTimeMax} min'),
-                              ],
-                            ),
-                            const SizedBox(height: 8),
+                            const SizedBox(height: 4),
+                            Text(restaurant.cuisine ?? '', style: TextStyle(color: Colors.grey.shade600)),
+                            if ((restaurant.description ?? '').isNotEmpty) ...[
+                              const SizedBox(height: 6),
+                              Text(restaurant.description!),
+                            ],
+                            const SizedBox(height: 10),
+                            _LikeShareRow(restaurant: restaurant),
                           ],
                         ),
                       ),
@@ -351,53 +293,6 @@ class _RestaurantMenuScreenState extends State<RestaurantMenuScreen> {
       ),
     );
   }
-}
-
-class _InfoChip extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  const _InfoChip({required this.icon, required this.label});
-
-  @override
-  Widget build(BuildContext context) => Row(
-    mainAxisSize: MainAxisSize.min,
-    children: [
-      Icon(icon, size: 17, color: Colors.grey.shade700),
-      const SizedBox(width: 5),
-      Text(label, style: TextStyle(fontSize: 12.5, color: Colors.grey.shade700, fontWeight: FontWeight.w600)),
-    ],
-  );
-}
-
-class _LikeButton extends StatefulWidget {
-  final Restaurant restaurant;
-  const _LikeButton({required this.restaurant});
-
-  @override
-  State<_LikeButton> createState() => _LikeButtonState();
-}
-
-class _LikeButtonState extends State<_LikeButton> {
-  late bool _liked = widget.restaurant.likedByMe;
-  bool _busy = false;
-
-  Future<void> _toggle() async {
-    setState(() => _busy = true);
-    try {
-      final (liked, _) = await CustomerService.toggleLike(widget.restaurant.id);
-      if (mounted) setState(() => _liked = liked);
-    } catch (_) {} finally {
-      if (mounted) setState(() => _busy = false);
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) => IconButton(
-    tooltip: 'Like',
-    onPressed: _busy ? null : _toggle,
-    icon: Icon(_liked ? Icons.favorite_rounded : Icons.favorite_border_rounded, color: _liked ? Colors.red : Colors.black87),
-    style: IconButton.styleFrom(backgroundColor: Colors.grey.shade100),
-  );
 }
 
 class _StatusPill extends StatelessWidget {

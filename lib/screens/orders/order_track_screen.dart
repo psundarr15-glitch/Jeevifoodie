@@ -156,33 +156,19 @@ class _OrderTrackScreenState extends State<OrderTrackScreen> {
               ],
               if (info.items.isNotEmpty) ...[
                 const Divider(height: 32),
-                Text(
-                  'Ordered Items',
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
-                ),
-                const SizedBox(height: 10),
-                for (final item in info.items) _OrderItemRow(item: item),
-              ] else ...[
-                const Divider(height: 32),
-                Container(
-                  padding: const EdgeInsets.all(14),
-                  decoration: BoxDecoration(
-                    color: AppTheme.primary.withOpacity(.06),
-                    borderRadius: BorderRadius.circular(14),
+                Text(AppLocalizations.of(context)!.itemsLabel, style: Theme.of(context).textTheme.titleMedium),
+                const SizedBox(height: 8),
+                for (final item in info.items)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 4),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text('${item['item_name']} x${item['quantity']}'),
+                        Text('₹${item['price']}'),
+                      ],
+                    ),
                   ),
-                  child: Row(
-                    children: [
-                      const Icon(Icons.receipt_long_outlined, color: AppTheme.primary),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: Text(
-                          'Order details are loading. Pull down to refresh.',
-                          style: TextStyle(color: AppTheme.textSecondary(context), fontWeight: FontWeight.w600),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
               ],
               if (info.history.isNotEmpty) ...[
                 const Divider(height: 32),
@@ -224,66 +210,6 @@ class _OrderTrackScreenState extends State<OrderTrackScreen> {
       default:
         return stage;
     }
-  }
-}
-
-class _OrderItemRow extends StatelessWidget {
-  final Map<String, dynamic> item;
-  const _OrderItemRow({required this.item});
-
-  @override
-  Widget build(BuildContext context) {
-    final name = (item['item_name'] ?? item['name'] ?? item['menu_item_name'] ?? 'Food item').toString();
-    final qty = (item['quantity'] ?? item['qty'] ?? 1).toString();
-    final price = (item['price'] ?? item['unit_price'] ?? item['total'] ?? '').toString();
-    final image = (item['image_url'] ?? item['image'] ?? '').toString().trim();
-
-    return Container(
-      margin: const EdgeInsets.only(bottom: 10),
-      padding: const EdgeInsets.all(10),
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: Colors.black.withOpacity(.06)),
-      ),
-      child: Row(
-        children: [
-          ClipRRect(
-            borderRadius: BorderRadius.circular(10),
-            child: SizedBox(
-              width: 58,
-              height: 58,
-              child: image.isNotEmpty
-                  ? Image.network(
-                      image,
-                      fit: BoxFit.cover,
-                      errorBuilder: (_, __, ___) => const ColoredBox(
-                        color: Color(0xFFFDEAEA),
-                        child: Icon(Icons.restaurant_rounded, color: AppTheme.primary),
-                      ),
-                    )
-                  : const ColoredBox(
-                      color: Color(0xFFFDEAEA),
-                      child: Icon(Icons.restaurant_rounded, color: AppTheme.primary),
-                    ),
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(name, maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.w800)),
-                const SizedBox(height: 4),
-                Text('Qty: $qty', style: TextStyle(color: AppTheme.textSecondary(context), fontSize: 12.5)),
-              ],
-            ),
-          ),
-          if (price.isNotEmpty)
-            Text('₹$price', style: const TextStyle(fontWeight: FontWeight.w800)),
-        ],
-      ),
-    );
   }
 }
 

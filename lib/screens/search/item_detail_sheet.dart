@@ -1,9 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
 import '../../models/menu_item.dart';
 import '../../services/search_service.dart';
-import '../../services/cart_service.dart';
-import '../../state/app_state.dart';
 import '../../theme.dart';
 import '../../l10n/app_localizations.dart';
 import '../restaurant/restaurant_menu_screen.dart';
@@ -20,27 +17,6 @@ class _ItemDetailSheetState extends State<ItemDetailSheet> {
   late bool _liked = widget.item.likedByMe;
   late int _likeCount = widget.item.likeCount;
   bool _toggling = false;
-  bool _adding = false;
-  int _qty = 1;
-
-  Future<void> _addToCart() async {
-    if (_adding || !widget.item.isAvailable || !widget.item.isOpen) return;
-    setState(() => _adding = true);
-    try {
-      await CartService.add(menuItemId: widget.item.id, quantity: _qty);
-      if (!mounted) return;
-      await context.read<AppState>().refreshCartCount();
-      Navigator.of(context).pop(true);
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(AppLocalizations.of(context)!.couldNotAddItem(e.toString()))),
-        );
-      }
-    } finally {
-      if (mounted) setState(() => _adding = false);
-    }
-  }
 
   Future<void> _toggleLike() async {
     if (_toggling) return;
@@ -181,99 +157,10 @@ class _ItemDetailSheetState extends State<ItemDetailSheet> {
                   decoration: BoxDecoration(color: AppTheme.primary.withOpacity(0.08), borderRadius: BorderRadius.circular(10)),
                   child: Text(t.storeCurrentlyClosed, textAlign: TextAlign.center, style: const TextStyle(color: AppTheme.primary, fontWeight: FontWeight.w600)),
                 ),
-              ] else if (!item.isAvailable) ...[
-                const SizedBox(height: 18),
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.symmetric(vertical: 12),
-                  decoration: BoxDecoration(color: Colors.grey.withOpacity(0.10), borderRadius: BorderRadius.circular(10)),
-                  child: Text(t.currentlyUnavailable, textAlign: TextAlign.center, style: TextStyle(color: AppTheme.textSecondary(context), fontWeight: FontWeight.w600)),
-                ),
-              ] else ...[
-                const SizedBox(height: 20),
-                Text(t.quantityLabel, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-                const SizedBox(height: 10),
-                Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 5),
-                      decoration: BoxDecoration(
-                        color: AppTheme.primary.withOpacity(0.06),
-                        borderRadius: BorderRadius.circular(24),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          _QtyButton(icon: Icons.remove, onTap: _qty > 1 ? () => setState(() => _qty--) : null),
-                          Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 20),
-                            child: Text('$_qty', style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w800)),
-                          ),
-                          _QtyButton(icon: Icons.add, onTap: () => setState(() => _qty++)),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: SizedBox(
-                        height: 50,
-                        child: ElevatedButton(
-                          onPressed: _adding ? null : _addToCart,
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: AppTheme.primary,
-                            foregroundColor: Colors.white,
-                            elevation: 0,
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                          ),
-                          child: _adding
-                              ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                              : Row(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    const Icon(Icons.shopping_cart_outlined, size: 19),
-                                    const SizedBox(width: 7),
-                                    Flexible(
-                                      child: Text(
-                                        t.addToCartAmount((_qty * item.price).toStringAsFixed(0)),
-                                        overflow: TextOverflow.ellipsis,
-                                        style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 13.5),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
               ],
             ],
           ),
         ),
-      ),
-    );
-  }
-}
-
-
-class _QtyButton extends StatelessWidget {
-  final IconData icon;
-  final VoidCallback? onTap;
-  const _QtyButton({required this.icon, required this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(20),
-      child: Container(
-        width: 34,
-        height: 34,
-        decoration: BoxDecoration(
-          color: onTap == null ? Colors.grey.shade200 : AppTheme.primary,
-          shape: BoxShape.circle,
-        ),
-        child: Icon(icon, size: 17, color: onTap == null ? Colors.grey : Colors.white),
       ),
     );
   }
