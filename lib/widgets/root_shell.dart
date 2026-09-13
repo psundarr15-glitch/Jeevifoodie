@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../state/app_state.dart';
 import '../l10n/app_localizations.dart';
@@ -30,8 +31,21 @@ class _RootShellState extends State<RootShell> {
       (Icons.shopping_bag_rounded, Icons.shopping_bag_outlined, t.navCart),
       (Icons.person_rounded, Icons.person_outline_rounded, t.navProfile),
     ];
-    return Scaffold(
-      body: IndexedStack(index: _index, children: _tabs),
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: SystemUiOverlayStyle(
+        statusBarColor: AppTheme.surface(context),
+        statusBarIconBrightness: isDark ? Brightness.light : Brightness.dark,
+        statusBarBrightness: isDark ? Brightness.dark : Brightness.light,
+        systemNavigationBarColor: AppTheme.surface(context),
+        systemNavigationBarIconBrightness: isDark ? Brightness.light : Brightness.dark,
+      ),
+      child: Scaffold(
+        body: SafeArea(
+          top: true,
+          bottom: false,
+          child: IndexedStack(index: _index, children: _tabs),
+        ),
       bottomNavigationBar: DecoratedBox(
         decoration: BoxDecoration(
           color: AppTheme.surface(context),
@@ -100,6 +114,7 @@ class _RootShellState extends State<RootShell> {
             ),
           ),
         ),
+      ),
       ),
     );
   }
