@@ -21,6 +21,18 @@ class _DeliveryPartnerSignupScreenState extends State<DeliveryPartnerSignupScree
   final _phone = TextEditingController();
   DateTime? _dob;
 
+  // The backend rejects the whole registration until this phone has been
+  // OTP-verified for purpose=register (see Api\DeliveryAuthApiController
+  // ::register() / DeliveryOtpModel::isPhoneVerified()). Editing the
+  // phone after verifying resets this, since the verification is tied
+  // to the exact number that was checked.
+  bool _otpSent = false;
+  bool _phoneVerified = false;
+  bool _sendingOtp = false;
+  bool _verifyingOtp = false;
+  String? _otpError;
+  final _otp = TextEditingController();
+
   final _city = TextEditingController();
   final _district = TextEditingController();
   final _pincode = TextEditingController();
@@ -43,6 +55,65 @@ class _DeliveryPartnerSignupScreenState extends State<DeliveryPartnerSignupScree
 
   bool _saving = false;
   String? _error;
+
+  @override
+  void dispose() {
+    _otp.dispose();
+    super.dispose();
+  }
+
+  void _onPhoneChanged(String _) {
+    // Verification is tied to the exact number that was OTP-checked - if
+    // it changes, the old verification no longer counts.
+    if (_phoneVerified || _otpSent) {
+      setState(() {
+        _phoneVerified = false;
+        _otpSent = false;
+        _otp.clear();
+        _otpError = null;
+      });
+    }
+  }
+
+  Future<void> _sendPhoneOtp() async {
+    final phone = _phone.text.trim();
+    if (!RegExp(r'^[0-9]{10}$').hasMatch(phone)) {
+      setState(() => _otpError = 'Enter a valid 10-digit phone number first.');
+      return;
+    }
+    setState(() {
+      _sendingOtp = true;
+      _otpError = null;
+    });
+    try {
+      await ApiClient.post(ApiConfig.deliverySendOtp, {'phone': phone, 'purpose': 'register'});
+      if (mounted) setState(() => _otpSent = true);
+    } catch (e) {
+      if (mounted) setState(() => _otpError = e.toString());
+    } finally {
+      if (mounted) setState(() => _sendingOtp = false);
+    }
+  }
+
+  Future<void> _verifyPhoneOtp() async {
+    final code = _otp.text.trim();
+    if (code.length != 6) {
+      setState(() => _otpError = 'Enter the 6-digit code.');
+      return;
+    }
+    setState(() {
+      _verifyingOtp = true;
+      _otpError = null;
+    });
+    try {
+      await ApiClient.post(ApiConfig.deliveryVerifyRegisterOtp, {'phone': _phone.text.trim(), 'otp': code});
+      if (mounted) setState(() => _phoneVerified = true);
+    } catch (e) {
+      if (mounted) setState(() => _otpError = e.toString());
+    } finally {
+      if (mounted) setState(() => _verifyingOtp = false);
+    }
+  }
 
   Future<void> _pickDob() async {
     final now = DateTime.now();
@@ -70,6 +141,10 @@ class _DeliveryPartnerSignupScreenState extends State<DeliveryPartnerSignupScree
 
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
+    if (!_phoneVerified) {
+      setState(() => _error = 'Please verify your phone number with the OTP before submitting.');
+      return;
+    }
     if (_dob == null) {
       setState(() => _error = 'Please select your date of birth.');
       return;
@@ -159,9 +234,56 @@ class _DeliveryPartnerSignupScreenState extends State<DeliveryPartnerSignupScree
               TextFormField(
                 controller: _phone,
                 keyboardType: TextInputType.phone,
-                decoration: InputDecoration(labelText: t.phone),
+                onChanged: _onPhoneChanged,
+                decoration: InputDecoration(
+                  labelText: t.phone,
+                  suffixIcon: _phoneVerified ? const Icon(Icons.check_circle, color: Colors.green) : null,
+                ),
                 validator: (v) => (v == null || v.trim().length < 10) ? t.validatorValidPhone : null,
               ),
+              const SizedBox(height: 8),
+              if (!_phoneVerified) ...[
+                if (!_otpSent)
+                  OutlinedButton(
+                    onPressed: _sendingOtp ? null : _sendPhoneOtp,
+                    child: _sendingOtp
+                        ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
+                        : const Text('Send OTP to verify this number'),
+                  )
+                else ...[
+                  Row(
+                    children: [
+                      Expanded(
+                        child: TextField(
+                          controller: _otp,
+                          keyboardType: TextInputType.number,
+                          maxLength: 6,
+                          decoration: const InputDecoration(labelText: 'Enter 6-digit OTP', counterText: ''),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      ElevatedButton(
+                        onPressed: _verifyingOtp ? null : _verifyPhoneOtp,
+                        child: _verifyingOtp
+                            ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                            : const Text('Verify'),
+                      ),
+                    ],
+                  ),
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: TextButton(
+                      onPressed: _sendingOtp ? null : _sendPhoneOtp,
+                      child: const Text('Resend OTP'),
+                    ),
+                  ),
+                ],
+                if (_otpError != null)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 4),
+                    child: Text(_otpError!, style: const TextStyle(color: Colors.red, fontSize: 12.5)),
+                  ),
+              ],
               const SizedBox(height: 12),
               TextFormField(
                 controller: _email,

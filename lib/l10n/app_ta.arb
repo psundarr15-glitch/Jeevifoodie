@@ -360,5 +360,13 @@
   "prepTimeAndCost": "{min}-{max} நிமிடங்கள்  •  இருவருக்கு ₹{cost}",
   "forTwo": "இருவருக்கு ₹{cost}",
   "@forTwo": {"placeholders": {"cost": {"type": "String"}}},
-  "@prepTimeAndCost": {"placeholders": {"min": {"type": "String"}, "max": {"type": "String"}, "cost": {"type": "String"}}}
+  "@prepTimeAndCost": {"placeholders": {"min": {"type": "String"}, "max": {"type": "String"}, "cost": {"type": "String"}}},
+
+  "cancelOrder": "ஆர்டரை ரத்து செய்",
+  "cancelOrderConfirmTitle": "இந்த ஆர்டரை ரத்து செய்யவா?",
+  "cancelOrderConfirmBody": "இதை மாற்ற முடியாது. உணவகத்திற்கு உடனடியாக தெரிவிக்கப்படும்.",
+  "keepOrder": "வேண்டாம், வைத்திரு",
+  "orderCancelledSuccess": "உங்கள் ஆர்டர் ரத்து செய்யப்பட்டது.",
+  "couldNotCancelOrder": "ஆர்டரை ரத்து செய்ய முடியவில்லை: {error}",
+  "@couldNotCancelOrder": {"placeholders": {"error": {"type": "String"}}}
 }

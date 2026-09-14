@@ -1,7 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../../models/menu_item.dart';
 import '../../models/restaurant.dart';
 import '../../services/search_service.dart';
+import '../../services/cart_service.dart';
+import '../../state/app_state.dart';
+import '../../utils/cart_restaurant_guard.dart';
+
 import '../../theme.dart';
 import '../../l10n/app_localizations.dart';
 import '../../widgets/restaurant_list_tile.dart';
@@ -20,6 +25,78 @@ class _SearchResultsScreenState extends State<SearchResultsScreen> with SingleTi
   late final TabController _tabController = TabController(length: 2, vsync: this);
   late final TextEditingController _searchController = TextEditingController(text: widget.initialQuery);
   late Future<SearchResults> _future = SearchService.search(widget.initialQuery);
+  double? _priceMin;
+  double? _priceMax;
+  bool _priceFilterActive = false;
+
+  Future<void> _openPriceFilter(List<MenuItem> items) async {
+    if (items.isEmpty) return;
+    final prices = items.map((e) => e.price).where((p) => p.isFinite && p >= 0).toList();
+    if (prices.isEmpty) return;
+    final minPrice = prices.reduce((a, b) => a < b ? a : b);
+    final maxPrice = prices.reduce((a, b) => a > b ? a : b);
+    final rangeMax = maxPrice <= minPrice ? minPrice + 1 : maxPrice;
+    double selectedMin = (_priceMin ?? minPrice).clamp(minPrice, rangeMax).toDouble();
+    double selectedMax = (_priceMax ?? maxPrice).clamp(selectedMin, rangeMax).toDouble();
+
+    final result = await showModalBottomSheet<bool>(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+      builder: (sheetContext) => StatefulBuilder(
+        builder: (context, setSheetState) => Padding(
+          padding: EdgeInsets.fromLTRB(20, 12, 20, 20 + MediaQuery.of(context).viewInsets.bottom),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(child: Container(width: 42, height: 4, decoration: BoxDecoration(color: Colors.grey.shade300, borderRadius: BorderRadius.circular(4)))),
+              const SizedBox(height: 18),
+              Row(children: [
+                const Expanded(child: Text('Filter by Price', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800))),
+                if (_priceFilterActive) TextButton(onPressed: () => Navigator.of(sheetContext).pop(false), child: const Text('Clear')),
+              ]),
+              Text('₹${selectedMin.round()}  -  ₹${selectedMax.round()}', style: TextStyle(color: AppTheme.primary, fontSize: 17, fontWeight: FontWeight.w800)),
+              const SizedBox(height: 4),
+              RangeSlider(
+                values: RangeValues(selectedMin, selectedMax),
+                min: minPrice,
+                max: rangeMax,
+                divisions: rangeMax - minPrice > 1 ? (rangeMax - minPrice).round().clamp(1, 100) : 1,
+                labels: RangeLabels('₹${selectedMin.round()}', '₹${selectedMax.round()}'),
+                onChanged: (values) => setSheetState(() { selectedMin = values.start; selectedMax = values.end; }),
+              ),
+              const SizedBox(height: 8),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: () {
+                    _priceMin = selectedMin;
+                    _priceMax = selectedMax;
+                    Navigator.of(sheetContext).pop(true);
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppTheme.primary, foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                  ),
+                  child: const Text('Apply Filter', style: TextStyle(fontWeight: FontWeight.w800)),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+    if (!mounted) return;
+    setState(() {
+      if (result == true) {
+        _priceFilterActive = true;
+      } else if (result == false) {
+        _priceMin = null; _priceMax = null; _priceFilterActive = false;
+      }
+    });
+  }
 
   @override
   void dispose() {
@@ -32,7 +109,12 @@ class _SearchResultsScreenState extends State<SearchResultsScreen> with SingleTi
     final trimmed = query.trim();
     if (trimmed.isEmpty) return;
     SearchService.addRecentSearch(trimmed);
-    setState(() => _future = SearchService.search(trimmed));
+    setState(() {
+      _future = SearchService.search(trimmed);
+      _priceMin = null;
+      _priceMax = null;
+      _priceFilterActive = false;
+    });
   }
 
   @override
@@ -82,21 +164,39 @@ class _SearchResultsScreenState extends State<SearchResultsScreen> with SingleTi
                     return Center(child: Text('${snap.error}'));
                   }
                   final results = snap.data!;
-                  final total = results.items.length + results.restaurants.length;
+                  final filteredItems = results.items.where((item) {
+                    if (!_priceFilterActive || _priceMin == null || _priceMax == null) return true;
+                    return item.price >= _priceMin! && item.price <= _priceMax!;
+                  }).toList();
+                  final total = filteredItems.length + results.restaurants.length;
 
                   return Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-                        child: RichText(
-                          text: TextSpan(
-                            style: DefaultTextStyle.of(context).style,
-                            children: [
-                              TextSpan(text: '$total ', style: const TextStyle(color: AppTheme.primary, fontWeight: FontWeight.bold)),
-                              TextSpan(text: t.resultsFound, style: TextStyle(color: Colors.grey.shade600)),
-                            ],
-                          ),
+                        padding: const EdgeInsets.fromLTRB(16, 6, 10, 6),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: RichText(
+                                text: TextSpan(
+                                  style: DefaultTextStyle.of(context).style,
+                                  children: [
+                                    TextSpan(text: '$total ', style: const TextStyle(color: AppTheme.primary, fontWeight: FontWeight.bold)),
+                                    TextSpan(text: t.resultsFound, style: TextStyle(color: Colors.grey.shade600)),
+                                  ],
+                                ),
+                              ),
+                            ),
+                            TextButton.icon(
+                              onPressed: () => _openPriceFilter(results.items),
+                              icon: Icon(Icons.tune_rounded, size: 19, color: _priceFilterActive ? AppTheme.primary : Colors.grey.shade700),
+                              label: Text(
+                                _priceFilterActive ? 'Price: ₹${_priceMin!.round()}–₹${_priceMax!.round()}' : 'Price',
+                                style: TextStyle(color: _priceFilterActive ? AppTheme.primary : Colors.grey.shade700, fontWeight: FontWeight.w700),
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                       TabBar(
@@ -113,7 +213,7 @@ class _SearchResultsScreenState extends State<SearchResultsScreen> with SingleTi
                         child: TabBarView(
                           controller: _tabController,
                           children: [
-                            _ItemsTab(items: results.items),
+                            _ItemsTab(items: filteredItems),
                             _RestaurantsTab(restaurants: results.restaurants),
                           ],
                         ),
@@ -130,28 +230,98 @@ class _SearchResultsScreenState extends State<SearchResultsScreen> with SingleTi
   }
 }
 
-class _ItemsTab extends StatelessWidget {
+class _ItemsTab extends StatefulWidget {
   final List<MenuItem> items;
   const _ItemsTab({required this.items});
 
   @override
+  State<_ItemsTab> createState() => _ItemsTabState();
+}
+
+class _ItemsTabState extends State<_ItemsTab> {
+  // Cart quantity is kept at the tab level, not inside each ListView item.
+  // ListView.builder is allowed to dispose off-screen children; keeping the
+  // quantity here prevents an item's +/- state from disappearing after scroll.
+  final Map<int, int> _cartQtyByItem = <int, int>{};
+  bool _cartLoaded = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadCartState();
+  }
+
+  Future<void> _loadCartState() async {
+    try {
+      final cart = await CartService.view();
+      final quantities = <int, int>{};
+      for (final cartItem in cart.items) {
+        final id = cartItem.menuItemId;
+        if (id != null && cartItem.quantity > 0) {
+          quantities[id] = cartItem.quantity;
+        }
+      }
+      if (!mounted) return;
+      setState(() {
+        _cartQtyByItem
+          ..clear()
+          ..addAll(quantities);
+        _cartLoaded = true;
+      });
+    } catch (_) {
+      if (mounted) setState(() => _cartLoaded = true);
+    }
+  }
+
+  void _setCartQty(int itemId, int quantity) {
+    if (!mounted) return;
+    setState(() {
+      if (quantity <= 0) {
+        _cartQtyByItem.remove(itemId);
+      } else {
+        _cartQtyByItem[itemId] = quantity;
+      }
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
     final t = AppLocalizations.of(context)!;
-    if (items.isEmpty) {
+    if (widget.items.isEmpty) {
       return Center(child: Text(t.noResultsFound, style: TextStyle(color: Colors.grey.shade600)));
     }
     return ListView.separated(
       padding: const EdgeInsets.all(16),
-      itemCount: items.length,
+      itemCount: widget.items.length,
       separatorBuilder: (_, __) => const SizedBox(height: 14),
-      itemBuilder: (context, i) => _ItemCard(item: items[i]),
+      itemBuilder: (context, i) {
+        final item = widget.items[i];
+        return _ItemCard(
+          key: ValueKey<int>(item.id),
+          item: item,
+          cartQty: _cartQtyByItem[item.id] ?? 0,
+          cartStateReady: _cartLoaded,
+          onCartQtyChanged: (qty) => _setCartQty(item.id, qty),
+        );
+      },
     );
   }
 }
 
 class _ItemCard extends StatefulWidget {
   final MenuItem item;
-  const _ItemCard({required this.item});
+  final int cartQty;
+  final bool cartStateReady;
+  final ValueChanged<int> onCartQtyChanged;
+
+  const _ItemCard({
+    super.key,
+    required this.item,
+    required this.cartQty,
+    required this.cartStateReady,
+    required this.onCartQtyChanged,
+  });
+
   @override
   State<_ItemCard> createState() => _ItemCardState();
 }
@@ -159,6 +329,46 @@ class _ItemCard extends StatefulWidget {
 class _ItemCardState extends State<_ItemCard> {
   late bool _liked = widget.item.likedByMe;
   bool _toggling = false;
+  bool _addingToCart = false;
+
+  Future<void> _addOneToCart() async {
+    if (_addingToCart || !widget.item.isAvailable) return;
+    setState(() => _addingToCart = true);
+    try {
+      // Search results span every restaurant, so this is the most likely
+      // spot to hit the single-restaurant cart rule - use the same guard
+      // FoodDetailScreen/RestaurantMenuScreen use instead of just
+      // surfacing the backend's raw 409 error.
+      final added = await CartRestaurantGuard.add(context, menuItemId: widget.item.id, restaurantId: widget.item.restaurantId, quantity: 1);
+      if (!added || !mounted) return;
+      await context.read<AppState>().refreshCartCount();
+      widget.onCartQtyChanged(widget.cartQty > 0 ? widget.cartQty + 1 : 1);
+    } finally {
+      if (mounted) setState(() => _addingToCart = false);
+    }
+  }
+
+  Future<void> _changeCartQty(int delta) async {
+    if (_addingToCart) return;
+    final current = widget.cartQty;
+    final next = current + delta;
+    if (current <= 0 || next < 1) return;
+    setState(() => _addingToCart = true);
+    try {
+      await CartService.add(menuItemId: widget.item.id, quantity: delta);
+      if (!mounted) return;
+      await context.read<AppState>().refreshCartCount();
+      widget.onCartQtyChanged(next);
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(AppLocalizations.of(context)!.couldNotAddItem(e.toString()))),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _addingToCart = false);
+    }
+  }
 
   Future<void> _toggleLike() async {
     if (_toggling) return;
@@ -179,13 +389,24 @@ class _ItemCardState extends State<_ItemCard> {
     final t = AppLocalizations.of(context)!;
     const fallbackImage = 'https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=200&h=200&fit=crop';
 
-    return GestureDetector(
-      onTap: () => showModalBottomSheet(
+    Future<void> openItem() async {
+      final added = await showModalBottomSheet<bool>(
         context: context,
         isScrollControlled: true,
         shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
         builder: (_) => ItemDetailSheet(item: item),
-      ),
+      );
+      if (mounted && added == true) {
+        widget.onCartQtyChanged(widget.cartQty > 0 ? widget.cartQty + 1 : 1);
+        await context.read<AppState>().refreshCartCount();
+      }
+    }
+
+    final qty = widget.cartQty;
+    final showPlusOnly = widget.cartStateReady && qty == 0;
+
+    return GestureDetector(
+      onTap: openItem,
       child: Container(
         decoration: BoxDecoration(
           color: AppTheme.surface(context),
@@ -277,7 +498,57 @@ class _ItemCardState extends State<_ItemCard> {
                     ),
                   ],
                   const SizedBox(height: 4),
-                  Text('₹${item.price.toStringAsFixed(0)}', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+                  Row(
+                    children: [
+                      Text('₹${item.price.toStringAsFixed(0)}', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+                      const Spacer(),
+                      if (showPlusOnly)
+                        Material(
+                          color: item.isAvailable ? AppTheme.primary : Colors.grey.shade300,
+                          shape: const CircleBorder(),
+                          child: InkWell(
+                            customBorder: const CircleBorder(),
+                            onTap: item.isAvailable && !_addingToCart ? _addOneToCart : null,
+                            child: SizedBox(
+                              width: 34,
+                              height: 34,
+                              child: Center(
+                                child: _addingToCart
+                                    ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                                    : const Icon(Icons.add, color: Colors.white, size: 21),
+                              ),
+                            ),
+                          ),
+                        )
+                      else
+                        Container(
+                          height: 36,
+                          decoration: BoxDecoration(
+                            color: AppTheme.primary,
+                            borderRadius: BorderRadius.circular(18),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              _InlineQtyButton(
+                                icon: Icons.remove,
+                                onTap: qty > 1 ? () => _changeCartQty(-1) : null,
+                                busy: _addingToCart,
+                              ),
+                              Padding(
+                                padding: const EdgeInsets.symmetric(horizontal: 8),
+                                child: Text('$qty', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 14)),
+                              ),
+                              _InlineQtyButton(
+                                icon: Icons.add,
+                                onTap: () => _changeCartQty(1),
+                                busy: _addingToCart,
+                              ),
+                            ],
+                          ),
+                        ),
+                    ],
+                  ),
                 ],
               ),
             ),
@@ -314,6 +585,30 @@ class _RestaurantsTab extends StatelessWidget {
           onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => RestaurantMenuScreen(restaurantId: r.id))),
         );
       },
+    );
+  }
+}
+
+
+class _InlineQtyButton extends StatelessWidget {
+  final IconData icon;
+  final VoidCallback? onTap;
+  final bool busy;
+
+  const _InlineQtyButton({required this.icon, required this.onTap, required this.busy});
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: busy ? null : onTap,
+      borderRadius: BorderRadius.circular(18),
+      child: SizedBox(
+        width: 34,
+        height: 36,
+        child: Center(
+          child: Icon(icon, size: 18, color: onTap == null ? Colors.white54 : Colors.white),
+        ),
+      ),
     );
   }
 }

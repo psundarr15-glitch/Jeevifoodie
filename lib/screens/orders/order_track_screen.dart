@@ -25,8 +25,12 @@ class _OrderTrackScreenState extends State<OrderTrackScreen> {
   Timer? _poll;
   final MapController _mapController = MapController();
   bool _mapReady = false;
+  bool _cancelling = false;
 
   static const _stages = ['placed', 'confirmed', 'preparing', 'picked_up', 'out_for_delivery', 'delivered'];
+  // Matches Api\OrderApiController::cancel() on the backend - it rejects
+  // the request once the order has moved past these two statuses.
+  static const _cancellableStatuses = ['placed', 'confirmed'];
 
   @override
   void initState() {
@@ -53,6 +57,39 @@ class _OrderTrackScreenState extends State<OrderTrackScreen> {
   void dispose() {
     _poll?.cancel();
     super.dispose();
+  }
+
+  Future<void> _cancelOrder(int orderId) async {
+    final t = AppLocalizations.of(context)!;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(t.cancelOrderConfirmTitle),
+        content: Text(t.cancelOrderConfirmBody),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text(t.keepOrder)),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: Text(t.cancelOrder, style: const TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+
+    setState(() => _cancelling = true);
+    try {
+      await OrderService.cancel(orderId: orderId);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(t.orderCancelledSuccess)));
+      _load();
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(t.couldNotCancelOrder(e.toString()))));
+      }
+    } finally {
+      if (mounted) setState(() => _cancelling = false);
+    }
   }
 
   @override
@@ -93,6 +130,24 @@ class _OrderTrackScreenState extends State<OrderTrackScreen> {
                   ),
                 ),
               const SizedBox(height: 16),
+              if (_cancellableStatuses.contains(info.orderStatus))
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 16),
+                  child: SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton.icon(
+                      onPressed: _cancelling ? null : () => _cancelOrder(info.orderId),
+                      icon: _cancelling
+                          ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
+                          : const Icon(Icons.cancel_outlined, color: Colors.red),
+                      label: Text(AppLocalizations.of(context)!.cancelOrder, style: const TextStyle(color: Colors.red)),
+                      style: OutlinedButton.styleFrom(
+                        side: const BorderSide(color: Colors.red),
+                        minimumSize: const Size.fromHeight(44),
+                      ),
+                    ),
+                  ),
+                ),
               if (info.deliveryPartnerId != null)
                 Padding(
                   padding: const EdgeInsets.only(bottom: 16),
@@ -156,19 +211,33 @@ class _OrderTrackScreenState extends State<OrderTrackScreen> {
               ],
               if (info.items.isNotEmpty) ...[
                 const Divider(height: 32),
-                Text(AppLocalizations.of(context)!.itemsLabel, style: Theme.of(context).textTheme.titleMedium),
-                const SizedBox(height: 8),
-                for (final item in info.items)
-                  Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 4),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text('${item['item_name']} x${item['quantity']}'),
-                        Text('₹${item['price']}'),
-                      ],
-                    ),
+                Text(
+                  'Ordered Items',
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
+                ),
+                const SizedBox(height: 10),
+                for (final item in info.items) _OrderItemRow(item: item),
+              ] else ...[
+                const Divider(height: 32),
+                Container(
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: AppTheme.primary.withOpacity(.06),
+                    borderRadius: BorderRadius.circular(14),
                   ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.receipt_long_outlined, color: AppTheme.primary),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          'Order details are loading. Pull down to refresh.',
+                          style: TextStyle(color: AppTheme.textSecondary(context), fontWeight: FontWeight.w600),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               ],
               if (info.history.isNotEmpty) ...[
                 const Divider(height: 32),
@@ -210,6 +279,66 @@ class _OrderTrackScreenState extends State<OrderTrackScreen> {
       default:
         return stage;
     }
+  }
+}
+
+class _OrderItemRow extends StatelessWidget {
+  final Map<String, dynamic> item;
+  const _OrderItemRow({required this.item});
+
+  @override
+  Widget build(BuildContext context) {
+    final name = (item['item_name'] ?? item['name'] ?? item['menu_item_name'] ?? 'Food item').toString();
+    final qty = (item['quantity'] ?? item['qty'] ?? 1).toString();
+    final price = (item['price'] ?? item['unit_price'] ?? item['total'] ?? '').toString();
+    final image = (item['image_url'] ?? item['image'] ?? '').toString().trim();
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surface,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: Colors.black.withOpacity(.06)),
+      ),
+      child: Row(
+        children: [
+          ClipRRect(
+            borderRadius: BorderRadius.circular(10),
+            child: SizedBox(
+              width: 58,
+              height: 58,
+              child: image.isNotEmpty
+                  ? Image.network(
+                      image,
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) => const ColoredBox(
+                        color: Color(0xFFFDEAEA),
+                        child: Icon(Icons.restaurant_rounded, color: AppTheme.primary),
+                      ),
+                    )
+                  : const ColoredBox(
+                      color: Color(0xFFFDEAEA),
+                      child: Icon(Icons.restaurant_rounded, color: AppTheme.primary),
+                    ),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(name, maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.w800)),
+                const SizedBox(height: 4),
+                Text('Qty: $qty', style: TextStyle(color: AppTheme.textSecondary(context), fontSize: 12.5)),
+              ],
+            ),
+          ),
+          if (price.isNotEmpty)
+            Text('₹$price', style: const TextStyle(fontWeight: FontWeight.w800)),
+        ],
+      ),
+    );
   }
 }
 

@@ -137,7 +137,26 @@ class _OrderCard extends StatelessWidget {
                     ),
                     borderRadius: BorderRadius.circular(AppTheme.radiusLg),
                   ),
-                  child: const Icon(Icons.restaurant_rounded, color: AppTheme.primary, size: 30),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(AppTheme.radiusLg),
+                    child: (order.imageUrl?.trim().isNotEmpty ?? false)
+                        ? Image.network(
+                            order.imageUrl!.trim(),
+                            width: 68,
+                            height: 68,
+                            fit: BoxFit.cover,
+                            errorBuilder: (_, __, ___) => const Icon(
+                              Icons.restaurant_rounded,
+                              color: AppTheme.primary,
+                              size: 30,
+                            ),
+                          )
+                        : const Icon(
+                            Icons.restaurant_rounded,
+                            color: AppTheme.primary,
+                            size: 30,
+                          ),
+                  ),
                 ),
                 const SizedBox(width: 14),
                 Expanded(

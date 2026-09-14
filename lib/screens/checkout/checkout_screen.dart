@@ -230,11 +230,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                 await Navigator.of(context).push(
                   MaterialPageRoute(builder: (_) => const AddAddressScreen()),
                 );
-                _razorpay = Razorpay();
-    _razorpay.on(Razorpay.EVENT_PAYMENT_SUCCESS, _onPaymentSuccess);
-    _razorpay.on(Razorpay.EVENT_PAYMENT_ERROR, _onPaymentError);
-    _razorpay.on(Razorpay.EVENT_EXTERNAL_WALLET, _onExternalWallet);
-    _loadAddresses();
+                _loadAddresses();
               },
               icon: const Icon(Icons.add),
               label: Text(t.addNewAddress),

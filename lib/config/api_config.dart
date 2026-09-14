@@ -28,6 +28,7 @@ class ApiConfig {
 
   static const String myOrders = '$baseUrl/customer/orders';
   static String trackOrder(String orderCode) => '$baseUrl/customer/orders/track/$orderCode';
+  static String cancelOrder(int orderId) => '$baseUrl/customer/orders/$orderId/cancel';
   static const String reviewStore = '$baseUrl/customer/review/store';
 
   static const String profileView = '$baseUrl/customer/profile';
@@ -73,4 +74,11 @@ class ApiConfig {
 
   static const String deliveryPartnerRegister = '$baseUrl/delivery/register';
   static const String vendorRegister = '$baseUrl/vendor/register';
+
+  // Delivery-partner registration requires proving phone ownership first
+  // (see Api\DeliveryAuthApiController::register(), which rejects the
+  // form outright until DeliveryOtpModel::isPhoneVerified() is true for
+  // that phone) - these two power that step in DeliveryPartnerSignupScreen.
+  static const String deliverySendOtp = '$baseUrl/delivery/otp/send';
+  static const String deliveryVerifyRegisterOtp = '$baseUrl/delivery/otp/verify-register';
 }

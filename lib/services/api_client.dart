@@ -59,7 +59,7 @@ class ApiClient {
   }
 
   static Future<Map<String, dynamic>> get(String url) async {
-    final res = await http.get(Uri.parse(url), headers: await _headers());
+    final res = await http.get(Uri.parse(url), headers: await _headers()).timeout(_apiTimeout);
     return _decode(res);
   }
 
@@ -69,7 +69,7 @@ class ApiClient {
       if (v != null) body[k] = v.toString();
     });
 
-    final res = await http.post(Uri.parse(url), headers: await _headers(), body: body);
+    final res = await http.post(Uri.parse(url), headers: await _headers(), body: body).timeout(_apiTimeout);
     return _decode(res);
   }
 

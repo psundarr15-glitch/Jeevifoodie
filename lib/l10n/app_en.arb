@@ -360,5 +360,13 @@
   "prepTimeAndCost": "{min}-{max} mins  •  ₹{cost} for two",
   "forTwo": "₹{cost} for two",
   "@forTwo": {"placeholders": {"cost": {"type": "String"}}},
-  "@prepTimeAndCost": {"placeholders": {"min": {"type": "String"}, "max": {"type": "String"}, "cost": {"type": "String"}}}
+  "@prepTimeAndCost": {"placeholders": {"min": {"type": "String"}, "max": {"type": "String"}, "cost": {"type": "String"}}},
+
+  "cancelOrder": "Cancel Order",
+  "cancelOrderConfirmTitle": "Cancel this order?",
+  "cancelOrderConfirmBody": "This can't be undone. The restaurant will be notified right away.",
+  "keepOrder": "No, Keep It",
+  "orderCancelledSuccess": "Your order has been cancelled.",
+  "couldNotCancelOrder": "Could not cancel order: {error}",
+  "@couldNotCancelOrder": {"placeholders": {"error": {"type": "String"}}}
 }

@@ -86,7 +86,27 @@ class OrderTrackingInfo {
             j['delivery_otp_required']?.toString().toLowerCase() == 'true' ||
             j['delivery_otp_required']?.toString() == '1' ||
             (j['delivery_otp']?.toString().trim().isNotEmpty ?? false),
-        items: (j['items'] as List? ?? []).cast<Map<String, dynamic>>(),
+        items: _readOrderItems(j),
         history: (j['history'] as List? ?? []).cast<Map<String, dynamic>>(),
       );
+}
+
+
+List<Map<String, dynamic>> _readOrderItems(Map<String, dynamic> j) {
+  final candidates = <dynamic>[
+    j['items'],
+    j['order_items'],
+    (j['order'] is Map ? (j['order'] as Map)['items'] : null),
+    (j['order'] is Map ? (j['order'] as Map)['order_items'] : null),
+  ];
+
+  for (final value in candidates) {
+    if (value is List && value.isNotEmpty) {
+      return value
+          .whereType<Map>()
+          .map((e) => Map<String, dynamic>.from(e))
+          .toList();
+    }
+  }
+  return const [];
 }
