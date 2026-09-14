@@ -101,13 +101,13 @@ class _HomeScreenState extends State<HomeScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        if (data.coupons.isNotEmpty)
+                        if (data.banners.isNotEmpty)
                           _ModernBannerCarousel(
-                            coupons: data.coupons,
-                            onOrderNow: _browseAll,
+                            banners: data.banners,
+                            onBrowseAll: _browseAll,
                           ),
 
-                        if (data.coupons.isNotEmpty)
+                        if (data.banners.isNotEmpty)
                           const SizedBox(height: 26),
 
                         if (data.categories.isNotEmpty) ...[
@@ -475,12 +475,16 @@ class _LocationSectionHeader extends StatelessWidget {
 ============================================================ */
 
 class _ModernBannerCarousel extends StatefulWidget {
-  final List<Map<String, dynamic>> coupons;
-  final VoidCallback onOrderNow;
+  // Admin/restaurant-manager-uploaded banners (Admin\HomeBannerController,
+  // customer app reads them from home()'s `banners` key) — each has
+  // image/title, and optionally restaurant_id+restaurant_name when it's a
+  // specific restaurant's own banner rather than an app-wide one.
+  final List<Map<String, dynamic>> banners;
+  final VoidCallback onBrowseAll;
 
   const _ModernBannerCarousel({
-    required this.coupons,
-    required this.onOrderNow,
+    required this.banners,
+    required this.onBrowseAll,
   });
 
   @override
@@ -500,14 +504,14 @@ class _ModernBannerCarouselState
 
     _controller = PageController();
 
-    if (widget.coupons.length > 1) {
+    if (widget.banners.length > 1) {
       _timer = Timer.periodic(
         const Duration(seconds: 4),
         (_) {
-          if (!mounted || widget.coupons.isEmpty) return;
+          if (!mounted || widget.banners.isEmpty) return;
 
           final next =
-              (_page + 1) % widget.coupons.length;
+              (_page + 1) % widget.banners.length;
 
           _controller.animateToPage(
             next,
@@ -527,246 +531,141 @@ class _ModernBannerCarouselState
     super.dispose();
   }
 
+  void _openBanner(Map<String, dynamic> banner) {
+    final restaurantId = banner['restaurant_id'];
+    if (restaurantId != null) {
+      Navigator.of(context).push(MaterialPageRoute(
+        builder: (_) => RestaurantMenuScreen(restaurantId: (restaurantId as num).toInt()),
+      ));
+    } else {
+      widget.onBrowseAll();
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    const foodImage =
-        'https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=800&h=600&fit=crop';
-
     return Column(
       children: [
         SizedBox(
           height: 190,
           child: PageView.builder(
             controller: _controller,
-            itemCount: widget.coupons.length,
+            itemCount: widget.banners.length,
             onPageChanged: (i) {
               setState(() => _page = i);
             },
             itemBuilder: (_, index) {
-              final coupon =
-                  widget.coupons[index];
+              final banner = widget.banners[index];
+              final imageUrl = banner['image']?.toString();
+              final title = banner['title']?.toString();
+              final restaurantName = banner['restaurant_name']?.toString();
 
-              final isPercent =
-                  coupon['discount_type'] ==
-                      'percent';
-
-              final label = isPercent
-                  ? '${coupon['discount_value']}%'
-                  : '₹${coupon['discount_value']}';
-
-              return Container(
-                margin:
-                    const EdgeInsets.symmetric(
-                  horizontal: 1,
-                ),
-                decoration: BoxDecoration(
-                  borderRadius:
-                      BorderRadius.circular(22),
-                  gradient:
-                      const LinearGradient(
-                    colors: [
-                      Color(0xFF164A2A),
-                      AppTheme.primaryDark,
-                    ],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
+              return GestureDetector(
+                onTap: () => _openBanner(banner),
+                child: Container(
+                  margin:
+                      const EdgeInsets.symmetric(
+                    horizontal: 1,
                   ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black
-                          .withOpacity(.12),
-                      blurRadius: 15,
-                      offset:
-                          const Offset(0, 7),
+                  decoration: BoxDecoration(
+                    borderRadius:
+                        BorderRadius.circular(22),
+                    gradient:
+                        const LinearGradient(
+                      colors: [
+                        Color(0xFF164A2A),
+                        AppTheme.primaryDark,
+                      ],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
                     ),
-                  ],
-                ),
-                clipBehavior:
-                    Clip.antiAlias,
-                child: Stack(
-                  fit: StackFit.expand,
-                  children: [
-                    // Full-width banner image — no blank half.
-                    Image.network(
-                      foodImage,
-                      fit: BoxFit.cover,
-                      errorBuilder: (_, __, ___) =>
-                          const SizedBox.expand(),
-                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black
+                            .withOpacity(.12),
+                        blurRadius: 15,
+                        offset:
+                            const Offset(0, 7),
+                      ),
+                    ],
+                  ),
+                  clipBehavior:
+                      Clip.antiAlias,
+                  child: Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      // Full-width banner image — no blank half.
+                      if (imageUrl != null && imageUrl.isNotEmpty)
+                        Image.network(
+                          imageUrl,
+                          fit: BoxFit.cover,
+                          errorBuilder: (_, __, ___) =>
+                              const SizedBox.expand(),
+                        ),
 
-                    // Dark overlay keeps the offer text and Order Now button readable.
-                    Positioned.fill(
-                      child: DecoratedBox(
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            begin: Alignment.centerLeft,
-                            end: Alignment.centerRight,
-                            colors: [
-                              Colors.black.withOpacity(.72),
-                              Colors.black.withOpacity(.40),
-                              Colors.black.withOpacity(.12),
-                            ],
+                      // Dark gradient at the bottom keeps the title
+                      // readable over any photo without hiding all of it.
+                      Positioned.fill(
+                        child: DecoratedBox(
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              begin: Alignment.bottomCenter,
+                              end: Alignment.topCenter,
+                              colors: [
+                                Colors.black.withOpacity(.65),
+                                Colors.black.withOpacity(.0),
+                              ],
+                              stops: const [0, 0.6],
+                            ),
                           ),
                         ),
                       ),
-                    ),
 
-                    Padding(
-                      padding:
-                          const EdgeInsets.fromLTRB(
-                        20,
-                        18,
-                        20,
-                        16,
+                      Positioned(
+                        left: 20,
+                        right: 20,
+                        bottom: 18,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            if (title != null && title.isNotEmpty)
+                              Text(
+                                title,
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 19,
+                                  fontWeight: FontWeight.w900,
+                                  height: 1.2,
+                                ),
+                              ),
+                            if (restaurantName != null && restaurantName.isNotEmpty) ...[
+                              const SizedBox(height: 4),
+                              Text(
+                                restaurantName,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  color: Colors.white.withOpacity(.85),
+                                  fontSize: 12.5,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
                       ),
-                      child: Column(
-                        crossAxisAlignment:
-                            CrossAxisAlignment.start,
-                        children: [
-                          Container(
-                            padding:
-                                const EdgeInsets
-                                    .symmetric(
-                              horizontal: 9,
-                              vertical: 5,
-                            ),
-                            decoration:
-                                BoxDecoration(
-                              color: Colors.white
-                                  .withOpacity(.16),
-                              borderRadius:
-                                  BorderRadius
-                                      .circular(
-                                20,
-                              ),
-                            ),
-                            child: const Text(
-                              'LIMITED OFFER',
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 9.5,
-                                fontWeight:
-                                    FontWeight.w800,
-                                letterSpacing: .6,
-                              ),
-                            ),
-                          ),
-
-                          const Spacer(),
-
-                          RichText(
-                            text: TextSpan(
-                              children: [
-                                TextSpan(
-                                  text: '$label ',
-                                  style:
-                                      const TextStyle(
-                                    color:
-                                        AppTheme.gold,
-                                    fontSize: 30,
-                                    fontWeight:
-                                        FontWeight.w900,
-                                  ),
-                                ),
-                                TextSpan(
-                                  text:
-                                      AppLocalizations
-                                          .of(context)!
-                                          .offSuffix,
-                                  style:
-                                      const TextStyle(
-                                    color:
-                                        Colors.white,
-                                    fontSize: 27,
-                                    fontWeight:
-                                        FontWeight.w900,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-
-                          const SizedBox(height: 3),
-
-                          Text(
-                            AppLocalizations.of(
-                              context,
-                            )!.useCode(
-                              coupon['code']
-                                  .toString(),
-                            ),
-                            style:
-                                const TextStyle(
-                              color:
-                                  Colors.white70,
-                              fontSize: 12,
-                            ),
-                          ),
-
-                          const SizedBox(height: 12),
-
-                          GestureDetector(
-                            onTap:
-                                widget.onOrderNow,
-                            child: Container(
-                              padding:
-                                  const EdgeInsets
-                                      .symmetric(
-                                horizontal: 15,
-                                vertical: 8,
-                              ),
-                              decoration:
-                                  BoxDecoration(
-                                color:
-                                    AppTheme.gold,
-                                borderRadius:
-                                    BorderRadius
-                                        .circular(
-                                  9,
-                                ),
-                              ),
-                              child: Row(
-                                mainAxisSize:
-                                    MainAxisSize.min,
-                                children: [
-                                  Text(
-                                    AppLocalizations
-                                        .of(context)!
-                                        .orderNow,
-                                    style:
-                                        const TextStyle(
-                                      color: AppTheme
-                                          .primaryDark,
-                                      fontSize: 11,
-                                      fontWeight:
-                                          FontWeight.w800,
-                                    ),
-                                  ),
-                                  const SizedBox(
-                                    width: 5,
-                                  ),
-                                  const Icon(
-                                    Icons
-                                        .arrow_forward_rounded,
-                                    color: AppTheme
-                                        .primaryDark,
-                                    size: 14,
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               );
             },
           ),
         ),
 
-        if (widget.coupons.length > 1)
+        if (widget.banners.length > 1)
           Padding(
             padding:
                 const EdgeInsets.only(top: 10),
@@ -774,7 +673,7 @@ class _ModernBannerCarouselState
               mainAxisAlignment:
                   MainAxisAlignment.center,
               children: List.generate(
-                widget.coupons.length,
+                widget.banners.length,
                 (i) {
                   final active = i == _page;
 

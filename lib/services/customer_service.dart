@@ -12,6 +12,7 @@ class HomeData {
   final List<Restaurant> newRestaurants;
   final List<MenuItem> popularItems;
   final List<Map<String, dynamic>> coupons;
+  final List<Map<String, dynamic>> banners;
   HomeData({
     required this.categories,
     required this.restaurants,
@@ -19,6 +20,7 @@ class HomeData {
     required this.newRestaurants,
     required this.popularItems,
     required this.coupons,
+    required this.banners,
   });
 }
 
@@ -75,6 +77,7 @@ class CustomerService {
           .map((e) => MenuItem.fromJson(e as Map<String, dynamic>))
           .toList(),
       coupons: (res['coupons'] as List? ?? []).cast<Map<String, dynamic>>(),
+      banners: (res['banners'] as List? ?? []).cast<Map<String, dynamic>>(),
     );
   }
 
