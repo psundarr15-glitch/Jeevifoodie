@@ -15,6 +15,7 @@ import '../../models/cart_item.dart';
 import '../../state/app_state.dart';
 import '../../utils/cart_restaurant_guard.dart';
 import '../../widgets/quantity_stepper.dart';
+import '../../widgets/restaurant_card.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -559,6 +560,12 @@ class _ModernBannerCarouselState
               final imageUrl = banner['image']?.toString();
               final title = banner['title']?.toString();
               final restaurantName = banner['restaurant_name']?.toString();
+              final couponCode = banner['coupon_code']?.toString();
+              final discountType = banner['discount_type']?.toString();
+              final discountValue = banner['discount_value']?.toString();
+              final discountLabel = (couponCode != null && couponCode.isNotEmpty && discountValue != null)
+                  ? (discountType == 'percent' ? '$discountValue% OFF' : '₹$discountValue OFF')
+                  : null;
 
               return GestureDetector(
                 onTap: () => _openBanner(banner),
@@ -629,6 +636,19 @@ class _ModernBannerCarouselState
                           crossAxisAlignment: CrossAxisAlignment.start,
                           mainAxisSize: MainAxisSize.min,
                           children: [
+                            if (discountLabel != null)
+                              Container(
+                                margin: const EdgeInsets.only(bottom: 6),
+                                padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: AppTheme.gold,
+                                  borderRadius: BorderRadius.circular(20),
+                                ),
+                                child: Text(
+                                  discountLabel,
+                                  style: const TextStyle(color: AppTheme.primaryDark, fontSize: 11, fontWeight: FontWeight.w900),
+                                ),
+                              ),
                             if (title != null && title.isNotEmpty)
                               Text(
                                 title,
@@ -651,6 +671,19 @@ class _ModernBannerCarouselState
                                   color: Colors.white.withOpacity(.85),
                                   fontSize: 12.5,
                                   fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ],
+                            if (couponCode != null && couponCode.isNotEmpty) ...[
+                              const SizedBox(height: 4),
+                              Text(
+                                'Use code $couponCode at checkout',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  color: Colors.white.withOpacity(.85),
+                                  fontSize: 11.5,
+                                  fontWeight: FontWeight.w700,
                                 ),
                               ),
                             ],
@@ -913,9 +946,10 @@ class _RestaurantHorizontalList extends StatelessWidget {
           final restaurant =
               restaurants[i];
 
-          return _ModernRestaurantCard(
+          return RestaurantCard(
             restaurant: restaurant,
             isNew: isNew,
+            width: 205,
             onTap: () {
               Navigator.of(context).push(
                 MaterialPageRoute(
@@ -934,349 +968,6 @@ class _RestaurantHorizontalList extends StatelessWidget {
   }
 }
 
-class _ModernRestaurantCard
-    extends StatefulWidget {
-  final dynamic restaurant;
-  final bool isNew;
-  final VoidCallback onTap;
-
-  const _ModernRestaurantCard({
-    required this.restaurant,
-    this.isNew = false,
-    required this.onTap,
-  });
-
-  @override
-  State<_ModernRestaurantCard>
-      createState() =>
-          _ModernRestaurantCardState();
-}
-
-class _ModernRestaurantCardState
-    extends State<_ModernRestaurantCard> {
-  late bool _liked =
-      widget.restaurant.likedByMe;
-
-  bool _toggling = false;
-
-  Future<void> _toggleLike() async {
-    if (_toggling) return;
-
-    setState(() {
-      _toggling = true;
-      _liked = !_liked;
-    });
-
-    try {
-      final result =
-          await CustomerService.toggleLike(
-        widget.restaurant.id,
-      );
-
-      if (mounted) {
-        setState(() {
-          _liked = result.$1;
-        });
-      }
-    } catch (_) {
-      if (mounted) {
-        setState(() {
-          _liked = !_liked;
-        });
-      }
-    } finally {
-      if (mounted) {
-        setState(() {
-          _toggling = false;
-        });
-      }
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final restaurant =
-        widget.restaurant;
-
-    const fallbackImage =
-        'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=600&h=400&fit=crop';
-
-    return GestureDetector(
-      onTap: widget.onTap,
-      child: SizedBox(
-        width: 205,
-        child: Column(
-          crossAxisAlignment:
-              CrossAxisAlignment.start,
-          children: [
-            Stack(
-              children: [
-                ClipRRect(
-                  borderRadius:
-                      BorderRadius.circular(
-                    AppTheme.radiusLg,
-                  ),
-                  child: Image.network(
-                    restaurant.image
-                                ?.isNotEmpty ==
-                            true
-                        ? restaurant.image!
-                        : fallbackImage,
-                    height: 132,
-                    width: 205,
-                    fit: BoxFit.cover,
-                    errorBuilder:
-                        (_, __, ___) =>
-                            Image.network(
-                      fallbackImage,
-                      height: 132,
-                      width: 205,
-                      fit: BoxFit.cover,
-                    ),
-                  ),
-                ),
-
-                if (widget.isNew)
-                  Positioned(
-                    top: 9,
-                    left: 50,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
-                      decoration: BoxDecoration(
-                        color: AppTheme.primary,
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: const Text(
-                        'NEW',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 10,
-                          fontWeight: FontWeight.w900,
-                          letterSpacing: .6,
-                        ),
-                      ),
-                    ),
-                  ),
-
-                Positioned(
-                  top: 9,
-                  left: 9,
-                  child: GestureDetector(
-                    onTap: _toggleLike,
-                    child: Container(
-                      height: 34,
-                      width: 34,
-                      decoration:
-                          BoxDecoration(
-                        color: Colors.black
-                            .withOpacity(.38),
-                        shape: BoxShape.circle,
-                      ),
-                      child: Icon(
-                        _liked
-                            ? Icons
-                                .favorite_rounded
-                            : Icons
-                                .favorite_border_rounded,
-                        color: _liked
-                            ? Colors.redAccent
-                            : Colors.white,
-                        size: 19,
-                      ),
-                    ),
-                  ),
-                ),
-
-                Positioned(
-                  top: 9,
-                  right: 9,
-                  child: Container(
-                    padding:
-                        const EdgeInsets
-                            .symmetric(
-                      horizontal: 7,
-                      vertical: 4,
-                    ),
-                    decoration:
-                        BoxDecoration(
-                      color: Colors.white,
-                      borderRadius:
-                          BorderRadius.circular(
-                        8,
-                      ),
-                    ),
-                    child: Row(
-                      children: [
-                        const Icon(
-                          Icons.star_rounded,
-                          size: 13,
-                          color:
-                              Color(0xFFFFB300),
-                        ),
-                        const SizedBox(
-                          width: 3,
-                        ),
-                        Text(
-                          restaurant.rating
-                              .toStringAsFixed(
-                            1,
-                          ),
-                          style:
-                              const TextStyle(
-                            fontSize: 10.5,
-                            fontWeight:
-                                FontWeight.w800,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-
-                Positioned(
-                  bottom: 9,
-                  left: 9,
-                  child: Container(
-                    padding:
-                        const EdgeInsets
-                            .symmetric(
-                      horizontal: 8,
-                      vertical: 5,
-                    ),
-                    decoration:
-                        BoxDecoration(
-                      color: Colors.black
-                          .withOpacity(.68),
-                      borderRadius:
-                          BorderRadius.circular(
-                        7,
-                      ),
-                    ),
-                    child: Text(
-                      restaurant.distanceKm !=
-                              null
-                          ? '${restaurant.distanceKm.toStringAsFixed(1)} km'
-                          : AppLocalizations
-                                  .of(context)!
-                              .prepTimeRange(
-                              restaurant
-                                  .prepTimeMin
-                                  .toString(),
-                              restaurant
-                                  .prepTimeMax
-                                  .toString(),
-                            ),
-                      style:
-                          const TextStyle(
-                        color: Colors.white,
-                        fontSize: 10.5,
-                        fontWeight:
-                            FontWeight.w600,
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-
-            const SizedBox(height: 9),
-
-            Text(
-              restaurant.name,
-              maxLines: 1,
-              overflow:
-                  TextOverflow.ellipsis,
-              style: TextStyle(
-                fontSize: 15,
-                fontWeight:
-                    FontWeight.w800,
-                color: AppTheme.textPrimary(context),
-              ),
-            ),
-
-            const SizedBox(height: 3),
-
-            Text(
-              restaurant.cuisine ?? '',
-              maxLines: 1,
-              overflow:
-                  TextOverflow.ellipsis,
-              style: TextStyle(
-                color: AppTheme.textSecondary(context),
-                fontSize: 11.5,
-              ),
-            ),
-
-            const SizedBox(height: 7),
-
-            Row(
-              children: [
-                Icon(
-                  Icons.access_time_rounded,
-                  size: 14,
-                  color: AppTheme.textSecondary(context),
-                ),
-                const SizedBox(width: 4),
-                Text(
-                  AppLocalizations.of(
-                    context,
-                  )!.prepTimeRange(
-                    restaurant.prepTimeMin
-                        .toString(),
-                    restaurant.prepTimeMax
-                        .toString(),
-                  ),
-                  style:
-                      TextStyle(
-                    fontSize: 10.5,
-                    fontWeight:
-                        FontWeight.w600,
-                    color: AppTheme.textPrimary(context),
-                  ),
-                ),
-                const SizedBox(width: 6),
-                Container(
-                  width: 3,
-                  height: 3,
-                  decoration:
-                      BoxDecoration(
-                    color:
-                        Colors.grey.shade400,
-                    shape:
-                        BoxShape.circle,
-                  ),
-                ),
-                const SizedBox(width: 6),
-                Expanded(
-                  child: Text(
-                    AppLocalizations.of(
-                      context,
-                    )!.forTwo(
-                      restaurant
-                          .costForTwo
-                          .toString(),
-                    ),
-                    maxLines: 1,
-                    overflow:
-                        TextOverflow.ellipsis,
-                    style:
-                        const TextStyle(
-                      color:
-                          AppTheme.primary,
-                      fontSize: 10.5,
-                      fontWeight:
-                          FontWeight.w700,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
 
 /* ============================================================
    POPULAR FOOD

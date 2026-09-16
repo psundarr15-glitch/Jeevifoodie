@@ -9,7 +9,7 @@ import '../../utils/cart_restaurant_guard.dart';
 
 import '../../theme.dart';
 import '../../l10n/app_localizations.dart';
-import '../../widgets/restaurant_list_tile.dart';
+import '../../widgets/restaurant_card.dart';
 import '../restaurant/restaurant_menu_screen.dart';
 import 'item_detail_sheet.dart';
 
@@ -575,12 +575,12 @@ class _RestaurantsTab extends StatelessWidget {
         crossAxisCount: 2,
         mainAxisSpacing: 14,
         crossAxisSpacing: 14,
-        childAspectRatio: 0.66,
+        childAspectRatio: 0.52,
       ),
       itemCount: restaurants.length,
       itemBuilder: (context, i) {
         final r = restaurants[i];
-        return RestaurantListTile(
+        return RestaurantCard(
           restaurant: r,
           onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => RestaurantMenuScreen(restaurantId: r.id))),
         );

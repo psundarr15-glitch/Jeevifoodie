@@ -368,5 +368,6 @@
   "keepOrder": "No, Keep It",
   "orderCancelledSuccess": "Your order has been cancelled.",
   "couldNotCancelOrder": "Could not cancel order: {error}",
-  "@couldNotCancelOrder": {"placeholders": {"error": {"type": "String"}}}
+  "@couldNotCancelOrder": {"placeholders": {"error": {"type": "String"}}},
+  "viewMenu": "View Menu"
 }

@@ -2,7 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import '../../services/customer_service.dart';
 import '../../models/restaurant.dart';
-import '../../widgets/restaurant_list_tile.dart';
+import '../../widgets/restaurant_card.dart';
 import 'restaurant_menu_screen.dart';
 import '../../l10n/app_localizations.dart';
 
@@ -89,12 +89,12 @@ class _RestaurantListScreenState extends State<RestaurantListScreen> {
                               crossAxisCount: 2,
                               mainAxisSpacing: 14,
                               crossAxisSpacing: 14,
-                              childAspectRatio: 0.66,
+                              childAspectRatio: 0.52,
                             ),
                             itemCount: _restaurants.length,
                             itemBuilder: (context, i) {
                               final r = _restaurants[i];
-                              return RestaurantListTile(
+                              return RestaurantCard(
                                 restaurant: r,
                                 onTap: () => Navigator.of(context).push(
                                   MaterialPageRoute(builder: (_) => RestaurantMenuScreen(restaurantId: r.id)),

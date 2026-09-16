@@ -19,6 +19,7 @@ class Restaurant {
   final String? address;
   final double? latitude;
   final double? longitude;
+  final String foodType; // 'veg' | 'non_veg' | 'both'
 
   Restaurant({
     required this.id,
@@ -41,6 +42,7 @@ class Restaurant {
     this.address,
     this.latitude,
     this.longitude,
+    this.foodType = 'both',
   });
 
   factory Restaurant.fromJson(Map<String, dynamic> j) => Restaurant(
@@ -64,6 +66,7 @@ class Restaurant {
         address: j['address']?.toString() ?? j['location']?.toString(),
         latitude: double.tryParse((j['lat'] ?? j['latitude'] ?? '').toString()),
         longitude: double.tryParse((j['lng'] ?? j['longitude'] ?? '').toString()),
+        foodType: (j['food_type']?.toString().isEmpty ?? true) ? 'both' : j['food_type'].toString(),
       );
 
   Restaurant copyWith({bool? likedByMe, int? likeCount}) => Restaurant(
@@ -87,5 +90,6 @@ class Restaurant {
         address: address,
         latitude: latitude,
         longitude: longitude,
+        foodType: foodType,
       );
 }
