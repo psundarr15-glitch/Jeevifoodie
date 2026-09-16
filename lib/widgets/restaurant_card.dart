@@ -37,10 +37,18 @@ class _RestaurantCardState extends State<RestaurantCard> {
 
   static const _fallbackImage = 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=600&h=400&fit=crop';
   // A dark forest green for the restaurant name — distinct from the
-  // app's red/gold brand accent (still used for the NEW ribbon, price,
-  // and View Menu button below), matching the target card design.
+  // app's red brand color (AppTheme.primary), which reads more red than
+  // the vivid orange the target design uses for the NEW ribbon, price,
+  // and View Menu button — so those use this warmer orange instead.
   static const _nameGreen = Color(0xFF163E2F);
   static const _logoCream = Color(0xFFF3EEDC);
+  static const _accentOrange = Color(0xFFF4511E);
+  static const _accentOrangeDark = Color(0xFFE64A19);
+  static const _accentGradient = LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [_accentOrange, _accentOrangeDark],
+  );
 
   Future<void> _toggleLike() async {
     if (_toggling) return;
@@ -103,8 +111,9 @@ class _RestaurantCardState extends State<RestaurantCard> {
                               alignment: Alignment.center,
                               padding: const EdgeInsets.symmetric(vertical: 5),
                               decoration: BoxDecoration(
-                                gradient: AppTheme.primaryGradient,
-                                boxShadow: AppTheme.shadowColored(AppTheme.primary, opacity: 0.35, blur: 8, offset: const Offset(0, 2)),
+                                gradient: _accentGradient,
+                                border: Border.symmetric(horizontal: BorderSide(color: Colors.white.withOpacity(0.85), width: 1.5)),
+                                boxShadow: AppTheme.shadowColored(_accentOrangeDark, opacity: 0.4, blur: 8, offset: const Offset(0, 2)),
                               ),
                               child: const Text(
                                 'NEW',
@@ -230,9 +239,16 @@ class _RestaurantCardState extends State<RestaurantCard> {
                     const SizedBox(height: 7),
                     Row(
                       children: [
-                        const Icon(Icons.sell_rounded, size: 14, color: AppTheme.primary),
+                        const Icon(Icons.sell_rounded, size: 14, color: _accentOrange),
                         const SizedBox(width: 5),
-                        Text(t.forTwo(restaurant.costForTwo.toString()), style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500)),
+                        Text.rich(
+                          TextSpan(
+                            children: [
+                              TextSpan(text: '₹${restaurant.costForTwo} ', style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w800, color: _accentOrange)),
+                              TextSpan(text: t.forTwoSuffix, style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w500, color: AppTheme.textSecondary(context))),
+                            ],
+                          ),
+                        ),
                       ],
                     ),
                     const SizedBox(height: 10),
@@ -262,7 +278,7 @@ class _RestaurantCardState extends State<RestaurantCard> {
                         const Spacer(),
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
-                          decoration: BoxDecoration(gradient: AppTheme.primaryGradient, borderRadius: BorderRadius.circular(AppTheme.radiusPill)),
+                          decoration: BoxDecoration(gradient: _accentGradient, borderRadius: BorderRadius.circular(AppTheme.radiusPill)),
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [

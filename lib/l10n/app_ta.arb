@@ -369,5 +369,6 @@
   "orderCancelledSuccess": "உங்கள் ஆர்டர் ரத்து செய்யப்பட்டது.",
   "couldNotCancelOrder": "ஆர்டரை ரத்து செய்ய முடியவில்லை: {error}",
   "@couldNotCancelOrder": {"placeholders": {"error": {"type": "String"}}},
-  "viewMenu": "மெனுவைப் பார்"
+  "viewMenu": "மெனுவைப் பார்",
+  "forTwoSuffix": "இருவருக்கு"
 }

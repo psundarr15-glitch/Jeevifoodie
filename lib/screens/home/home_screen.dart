@@ -931,7 +931,11 @@ class _RestaurantHorizontalList extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      height: 258,
+      // Tall enough for RestaurantCard's full content at width:205 -
+      // image + logo row + rating row + price row + veg-pill/View-Menu
+      // row. Was 258 (sized for the older, shorter card design), which
+      // silently clipped the bottom row off.
+      height: 330,
       child: ListView.separated(
         scrollDirection:
             Axis.horizontal,
@@ -949,7 +953,7 @@ class _RestaurantHorizontalList extends StatelessWidget {
           return RestaurantCard(
             restaurant: restaurant,
             isNew: isNew,
-            width: 205,
+            width: 225,
             onTap: () {
               Navigator.of(context).push(
                 MaterialPageRoute(
