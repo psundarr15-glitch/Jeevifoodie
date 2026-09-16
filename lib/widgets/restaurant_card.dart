@@ -3,6 +3,7 @@ import '../models/restaurant.dart';
 import '../services/customer_service.dart';
 import '../theme.dart';
 import '../l10n/app_localizations.dart';
+import 'food_type_icons.dart';
 
 /// The one restaurant card design used everywhere a restaurant is shown
 /// as a card: home screen's horizontal sections (Nearby/Popular/New),
@@ -264,7 +265,7 @@ class _RestaurantCardState extends State<RestaurantCard> {
                             child: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                Icon(isVeg ? Icons.eco_rounded : Icons.kebab_dining_rounded, size: 13, color: isVeg ? AppTheme.success : AppTheme.primary),
+                                isVeg ? const VegLeafIcon(size: 13) : const NonVegDrumstickIcon(size: 13),
                                 const SizedBox(width: 5),
                                 Text(
                                   isVeg ? t.vegLabel : t.nonVegLabel,
