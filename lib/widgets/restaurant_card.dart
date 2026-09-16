@@ -264,7 +264,7 @@ class _RestaurantCardState extends State<RestaurantCard> {
                             child: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                Icon(isVeg ? Icons.eco_rounded : Icons.set_meal_rounded, size: 13, color: isVeg ? AppTheme.success : AppTheme.primary),
+                                Icon(isVeg ? Icons.eco_rounded : Icons.kebab_dining_rounded, size: 13, color: isVeg ? AppTheme.success : AppTheme.primary),
                                 const SizedBox(width: 5),
                                 Text(
                                   isVeg ? t.vegLabel : t.nonVegLabel,
