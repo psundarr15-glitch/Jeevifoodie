@@ -5,6 +5,7 @@ class CartItem {
   final double price;
   final int quantity;
   final bool isVeg;
+  final String? image;
 
   CartItem({
     required this.id,
@@ -13,6 +14,7 @@ class CartItem {
     required this.price,
     required this.quantity,
     this.isVeg = true,
+    this.image,
   });
 
   double get lineTotal => price * quantity;
@@ -24,5 +26,6 @@ class CartItem {
         price: double.tryParse(j['price']?.toString() ?? '') ?? 0,
         quantity: int.tryParse(j['quantity']?.toString() ?? '') ?? 1,
         isVeg: j['is_veg'].toString() == '1' || j['is_veg'] == true,
+        image: (j['image']?.toString().isEmpty ?? true) ? null : j['image'].toString(),
       );
 }

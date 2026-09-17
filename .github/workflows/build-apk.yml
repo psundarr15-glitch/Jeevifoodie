@@ -40,6 +40,18 @@ jobs:
       - name: Ensure Android platform files exist
         run: flutter create --platforms=android --org com.foodexpress --project-name customer_app .
 
+      # The display name shown under the icon on the phone's home
+      # screen / app drawer — separate from `customer_app` above, which
+      # is just the internal Flutter/Gradle project identifier (used in
+      # Dart import paths throughout lib/, not shown to users, and not
+      # worth renaming). `flutter create` sets android:label to that
+      # internal project name by default, so it has to be overwritten
+      # here every build, same as every other manifest edit below.
+      - name: Set app display name
+        run: |
+          MANIFEST=android/app/src/main/AndroidManifest.xml
+          sed -i 's/android:label="[^"]*"/android:label="JEEVI FOODIE"/' "$MANIFEST"
+
       # Generates android/app/src/main/res/mipmap-*/ic_launcher.png (and the
       # iOS AppIcon set) from assets/icon/icon.png + icon_foreground.png.
       # Must run after "Ensure Android platform files exist" above, since

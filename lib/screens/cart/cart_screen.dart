@@ -128,7 +128,14 @@ class _CartScreenState extends State<CartScreen> {
                               color: item.isVeg ? Colors.green.withOpacity(.08) : AppTheme.primary.withOpacity(.08),
                               borderRadius: BorderRadius.circular(15),
                             ),
-                            child: Icon(item.isVeg ? Icons.eco_rounded : Icons.restaurant_rounded, color: item.isVeg ? Colors.green : AppTheme.primary, size: 28),
+                            clipBehavior: Clip.antiAlias,
+                            child: item.image != null
+                                ? Image.network(
+                                    item.image!,
+                                    fit: BoxFit.cover,
+                                    errorBuilder: (_, __, ___) => Icon(item.isVeg ? Icons.eco_rounded : Icons.restaurant_rounded, color: item.isVeg ? Colors.green : AppTheme.primary, size: 28),
+                                  )
+                                : Icon(item.isVeg ? Icons.eco_rounded : Icons.restaurant_rounded, color: item.isVeg ? Colors.green : AppTheme.primary, size: 28),
                           ),
                           const SizedBox(width: 12),
                           Expanded(
