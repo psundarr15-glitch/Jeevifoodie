@@ -53,7 +53,22 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     return '$h:$m $ampm';
   }
 
+  bool _isThirukural(AppNotification n) => n.title.contains('திருக்குறள்');
+
   void _openDetail(AppNotification n) {
+    final isKural = _isThirukural(n);
+    // Backend puts a blank line between the couplet and its meaning
+    // (see ThirukuralModel::sendTodayNotification()) - split on the
+    // first one so they render as two visually distinct sections
+    // instead of one run-on paragraph.
+    String kuralLines = n.body;
+    String? meaning;
+    if (isKural) {
+      final parts = n.body.split('\n\n');
+      kuralLines = parts.first;
+      if (parts.length > 1) meaning = parts.sublist(1).join('\n\n');
+    }
+
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -88,9 +103,41 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(n.title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 17)),
-                    const SizedBox(height: 10),
-                    Text(n.body, style: TextStyle(color: Colors.grey.shade700, fontSize: 14.5, height: 1.4)),
+                    Row(
+                      children: [
+                        if (isKural) ...[
+                          const _ThirukuralIcon(size: 30),
+                          const SizedBox(width: 10),
+                        ],
+                        Expanded(child: Text(n.title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 17))),
+                      ],
+                    ),
+                    const SizedBox(height: 14),
+                    if (isKural) ...[
+                      // The couplet itself, set apart in its own
+                      // quote-styled block (a left accent bar, like a
+                      // pull-quote) so it reads as the actual verse
+                      // rather than blending into the explanation below.
+                      Container(
+                        padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
+                        decoration: BoxDecoration(
+                          color: AppTheme.gold.withOpacity(0.10),
+                          borderRadius: BorderRadius.circular(10),
+                          border: const Border(left: BorderSide(color: AppTheme.gold, width: 3)),
+                        ),
+                        child: Text(
+                          kuralLines,
+                          style: const TextStyle(fontSize: 15.5, fontWeight: FontWeight.w700, height: 1.5, fontStyle: FontStyle.italic),
+                        ),
+                      ),
+                      if (meaning != null) ...[
+                        const SizedBox(height: 14),
+                        Text('பொருள்', style: TextStyle(color: AppTheme.textSecondary(context), fontSize: 12, fontWeight: FontWeight.w700, letterSpacing: 0.3)),
+                        const SizedBox(height: 4),
+                        Text(meaning, style: TextStyle(color: Colors.grey.shade700, fontSize: 14.5, height: 1.4)),
+                      ],
+                    ] else
+                      Text(n.body, style: TextStyle(color: Colors.grey.shade700, fontSize: 14.5, height: 1.4)),
                     const SizedBox(height: 16),
                     Text(_time(n.createdAt), style: TextStyle(color: Colors.grey.shade500, fontSize: 12)),
                   ],
@@ -155,6 +202,22 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   }
 }
 
+/// A themed badge for "இன்றைய திருக்குறள்" notifications — visually
+/// distinct from the plain bell icon every other notification uses, so
+/// it reads as literary/daily-verse content at a glance in the list.
+class _ThirukuralIcon extends StatelessWidget {
+  final double size;
+  const _ThirukuralIcon({required this.size});
+
+  @override
+  Widget build(BuildContext context) => Container(
+        width: size,
+        height: size,
+        decoration: const BoxDecoration(color: AppTheme.primaryDark, shape: BoxShape.circle),
+        child: Icon(Icons.auto_stories_rounded, color: AppTheme.gold, size: size * 0.5),
+      );
+}
+
 class _NotificationTile extends StatelessWidget {
   final AppNotification n;
   final String time;
@@ -172,12 +235,14 @@ class _NotificationTile extends StatelessWidget {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Container(
-              width: 40,
-              height: 40,
-              decoration: BoxDecoration(color: AppTheme.gold.withOpacity(0.18), shape: BoxShape.circle),
-              child: const Icon(Icons.notifications, color: AppTheme.gold, size: 20),
-            ),
+            n.title.contains('திருக்குறள்')
+                ? const _ThirukuralIcon(size: 40)
+                : Container(
+                    width: 40,
+                    height: 40,
+                    decoration: BoxDecoration(color: AppTheme.gold.withOpacity(0.18), shape: BoxShape.circle),
+                    child: const Icon(Icons.notifications, color: AppTheme.gold, size: 20),
+                  ),
             const SizedBox(width: 12),
             Expanded(
               child: Column(
