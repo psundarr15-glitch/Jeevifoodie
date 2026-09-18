@@ -20,6 +20,30 @@ class _RootShellState extends State<RootShell> {
   late int _index = widget.initialIndex;
   static const _tabs = [HomeScreen(), OrdersScreen(), ChatsListScreen(), CartScreen(), ProfileScreen()];
 
+  // Double-back-to-exit: this is the app's root screen (no other route
+  // sits above the tabs once logged in), so a single system back press
+  // here would otherwise close the app immediately — surprising and
+  // easy to trigger by accident. The first press just warns; only a
+  // second one within this window actually exits.
+  DateTime? _lastBackPress;
+  static const _exitWindow = Duration(seconds: 2);
+
+  void _handleBack() {
+    final now = DateTime.now();
+    if (_lastBackPress != null && now.difference(_lastBackPress!) < _exitWindow) {
+      SystemNavigator.pop();
+      return;
+    }
+    _lastBackPress = now;
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(
+        content: Text(AppLocalizations.of(context)!.pressBackAgainToExit),
+        duration: _exitWindow,
+        behavior: SnackBarBehavior.floating,
+      ));
+  }
+
   @override
   Widget build(BuildContext context) {
     final cartCount = context.watch<AppState>().cartCount;
@@ -40,7 +64,13 @@ class _RootShellState extends State<RootShell> {
         systemNavigationBarColor: AppTheme.surface(context),
         systemNavigationBarIconBrightness: isDark ? Brightness.light : Brightness.dark,
       ),
-      child: Scaffold(
+      child: PopScope(
+        canPop: false,
+        onPopInvokedWithResult: (didPop, result) {
+          if (didPop) return;
+          _handleBack();
+        },
+        child: Scaffold(
         body: SafeArea(
           top: true,
           bottom: false,
@@ -114,6 +144,7 @@ class _RootShellState extends State<RootShell> {
             ),
           ),
         ),
+      ),
       ),
       ),
     );

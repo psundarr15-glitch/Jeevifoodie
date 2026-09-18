@@ -370,5 +370,6 @@
   "couldNotCancelOrder": "Could not cancel order: {error}",
   "@couldNotCancelOrder": {"placeholders": {"error": {"type": "String"}}},
   "viewMenu": "View Menu",
-  "forTwoSuffix": "for two"
+  "forTwoSuffix": "for two",
+  "pressBackAgainToExit": "Press back again to exit"
 }

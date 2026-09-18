@@ -370,5 +370,6 @@
   "couldNotCancelOrder": "ஆர்டரை ரத்து செய்ய முடியவில்லை: {error}",
   "@couldNotCancelOrder": {"placeholders": {"error": {"type": "String"}}},
   "viewMenu": "மெனுவைப் பார்",
-  "forTwoSuffix": "இருவருக்கு"
+  "forTwoSuffix": "இருவருக்கு",
+  "pressBackAgainToExit": "வெளியேற மீண்டும் பின் பட்டனை அழுத்தவும்"
 }
