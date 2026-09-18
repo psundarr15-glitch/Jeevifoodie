@@ -986,8 +986,29 @@ class _PopularFoodList extends StatefulWidget {
 class _PopularFoodListState extends State<_PopularFoodList> {
   final Map<int, int> _qty = {};
   final Set<int> _busy = {};
+  int? _lastObservedCartVersion;
 
   @override void initState() { super.initState(); _loadCart(); }
+
+  // This widget lives inside RootShell's IndexedStack, so it's never
+  // disposed/recreated when the user switches away to another tab or
+  // pushes a different restaurant's menu on top - initState() above
+  // only ever runs once. Without this, adding/resetting the cart from
+  // anywhere other than this exact list (a different restaurant's menu
+  // screen, search, Cart tab) would leave _qty showing stale items
+  // indefinitely, with +/- controls pointing at cart_item_ids that
+  // don't exist anymore. AppState.cartVersion (see its own doc
+  // comment) bumps on every cart mutation from anywhere in the app, so
+  // watching it here keeps this list correct even while it's the tab
+  // *not* currently on screen.
+  void _syncWithAppState(int cartVersion) {
+    if (_lastObservedCartVersion == cartVersion) return;
+    _lastObservedCartVersion = cartVersion;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      _loadCart();
+    });
+  }
 
   Future<void> _loadCart() async {
     try {
@@ -1038,6 +1059,7 @@ class _PopularFoodListState extends State<_PopularFoodList> {
   }
 
   @override Widget build(BuildContext context) {
+    _syncWithAppState(context.watch<AppState>().cartVersion);
     return SizedBox(
       height: 245,
       child: ListView.separated(

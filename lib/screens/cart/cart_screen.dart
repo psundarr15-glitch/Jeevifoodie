@@ -16,14 +16,14 @@ class CartScreen extends StatefulWidget {
 class _CartScreenState extends State<CartScreen> {
   late Future<CartSnapshot> _future;
   final Set<int> _busy = {};
-  int? _lastObservedCartCount;
+  int? _lastObservedCartVersion;
 
   @override void initState() { super.initState(); _load(); }
   void _load() { _future = CartService.view(); }
 
-  void _syncWithAppStateCartCount(int cartCount) {
-    if (_lastObservedCartCount == cartCount) return;
-    _lastObservedCartCount = cartCount;
+  void _syncWithAppState(int cartVersion) {
+    if (_lastObservedCartVersion == cartVersion) return;
+    _lastObservedCartVersion = cartVersion;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       setState(_load);
@@ -55,8 +55,8 @@ class _CartScreenState extends State<CartScreen> {
   @override
   Widget build(BuildContext context) {
     final t = AppLocalizations.of(context)!;
-    final cartCount = context.watch<AppState>().cartCount;
-    _syncWithAppStateCartCount(cartCount);
+    final cartVersion = context.watch<AppState>().cartVersion;
+    _syncWithAppState(cartVersion);
     return Scaffold(
       backgroundColor: AppTheme.scaffoldBg(context),
       appBar: AppBar(

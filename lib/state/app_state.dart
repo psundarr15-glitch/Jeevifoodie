@@ -7,6 +7,14 @@ import '../services/notification_service.dart';
 class AppState extends ChangeNotifier {
   bool isLoggedIn = false;
   int cartCount = 0;
+  // Bumped on every refreshCartCount() call, unlike cartCount itself -
+  // a cross-restaurant reset removes one item and adds another, which
+  // can easily leave the total count unchanged (e.g. 1 item -> 1 item),
+  // so anything that only reacts to cartCount changing (screens kept
+  // alive in RootShell's IndexedStack - Cart tab, Home's Popular Items
+  // - watch this instead) would miss it and keep showing the old
+  // item's stale, already-deleted cart_item_id.
+  int cartVersion = 0;
   Map<String, dynamic>? currentUser;
   bool notificationsEnabled = true;
 
@@ -61,6 +69,7 @@ class AppState extends ChangeNotifier {
     try {
       final cart = await CartService.view();
       cartCount = cart.count;
+      cartVersion++;
       notifyListeners();
     } catch (_) {
       // not logged in / network issue - ignore, badge just stays as-is
