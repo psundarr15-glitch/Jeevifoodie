@@ -1,10 +1,9 @@
 import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:flutter_map/flutter_map.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:http/http.dart' as http;
-import 'package:latlong2/latlong.dart';
 import 'package:provider/provider.dart';
 import '../../services/profile_service.dart';
 import '../../state/app_state.dart';
@@ -14,8 +13,7 @@ import '../../l10n/app_localizations.dart';
 enum _AddressLabelKind { home, work, other }
 
 /// Single-screen "Add New Address": drag-to-pin map at the top (reverse
-/// geocoded live, same free OpenStreetMap/Nominatim lookup the old
-/// two-step flow used — no Google Maps key needed), Label As chips,
+/// geocoded live via OpenStreetMap's free Nominatim API), Label As chips,
 /// contact person details (defaulted from the logged-in profile),
 /// then the finer address fields, all under one "Save Location" button.
 class AddAddressScreen extends StatefulWidget {
@@ -26,7 +24,7 @@ class AddAddressScreen extends StatefulWidget {
 
 class _AddAddressScreenState extends State<AddAddressScreen> {
   final _formKey = GlobalKey<FormState>();
-  final _mapController = MapController();
+  GoogleMapController? _mapController;
 
   _AddressLabelKind _labelKind = _AddressLabelKind.home;
   final _addressLine = TextEditingController();
@@ -68,6 +66,7 @@ class _AddAddressScreenState extends State<AddAddressScreen> {
     _streetNumber.dispose();
     _house.dispose();
     _floor.dispose();
+    _mapController?.dispose();
     super.dispose();
   }
 
@@ -90,7 +89,7 @@ class _AddAddressScreenState extends State<AddAddressScreen> {
       final pos = await Geolocator.getCurrentPosition();
       final target = LatLng(pos.latitude, pos.longitude);
       setState(() => _center = target);
-      _mapController.move(target, 16);
+      _mapController?.animateCamera(CameraUpdate.newLatLngZoom(target, 16));
       await _reverseGeocode();
     } catch (e) {
       setState(() => _error = e.toString());
@@ -212,28 +211,19 @@ class _AddAddressScreenState extends State<AddAddressScreen> {
                 decoration: BoxDecoration(border: Border.all(color: AppTheme.primary, width: 1.5)),
                 child: Stack(
                   children: [
-                    FlutterMap(
-                      mapController: _mapController,
-                      options: MapOptions(
-                        initialCenter: _center,
-                        initialZoom: 16,
-                        onPositionChanged: (pos, hasGesture) {
-                          if (hasGesture) {
-                            _center = pos.center;
-                            // Debounce - wait until the drag settles
-                            // before firing a reverse-geocode lookup,
-                            // instead of one per frame while dragging.
-                            _debounce?.cancel();
-                            _debounce = Timer(const Duration(milliseconds: 700), _reverseGeocode);
-                          }
-                        },
-                      ),
-                      children: [
-                        TileLayer(
-                          urlTemplate: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
-                          userAgentPackageName: 'com.foodexpress.customer_app',
-                        ),
-                      ],
+                    GoogleMap(
+                      initialCameraPosition: CameraPosition(target: _center, zoom: 16),
+                      onMapCreated: (controller) => _mapController = controller,
+                      onCameraMove: (pos) {
+                        _center = pos.target;
+                        // Debounce - wait until the drag settles
+                        // before firing a reverse-geocode lookup,
+                        // instead of one per frame while dragging.
+                        _debounce?.cancel();
+                        _debounce = Timer(const Duration(milliseconds: 700), _reverseGeocode);
+                      },
+                      myLocationButtonEnabled: false,
+                      zoomControlsEnabled: false,
                     ),
                     // Fixed center pin with a "PICK" flag - the map moves
                     // underneath it, which is the standard "drag map to

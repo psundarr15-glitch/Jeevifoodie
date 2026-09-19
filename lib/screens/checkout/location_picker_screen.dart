@@ -1,9 +1,8 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:flutter_map/flutter_map.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:http/http.dart' as http;
-import 'package:latlong2/latlong.dart';
 import '../../theme.dart';
 import '../../l10n/app_localizations.dart';
 
@@ -26,11 +25,11 @@ class PickedLocation {
 
 /// Lets the person drag the map to pin their exact delivery spot, then
 /// reverse-geocodes that point (via OpenStreetMap's free Nominatim API -
-/// no key needed, matching the no-API-key map already used for order
-/// tracking) to fill in the address fields automatically. Those fields
-/// stay editable afterwards - this is a starting point, not the final
-/// word, since reverse geocoding can be imprecise for new buildings or
-/// rural addresses.
+/// no separate key needed beyond the Google Maps one already set up for
+/// rendering the map itself) to fill in the address fields
+/// automatically. Those fields stay editable afterwards - this is a
+/// starting point, not the final word, since reverse geocoding can be
+/// imprecise for new buildings or rural addresses.
 class LocationPickerScreen extends StatefulWidget {
   const LocationPickerScreen({super.key});
   @override
@@ -38,7 +37,7 @@ class LocationPickerScreen extends StatefulWidget {
 }
 
 class _LocationPickerScreenState extends State<LocationPickerScreen> {
-  final _mapController = MapController();
+  GoogleMapController? _mapController;
   LatLng _center = const LatLng(13.0827, 80.2707); // Chennai, sensible default
   bool _locating = false;
   bool _resolving = false;
@@ -48,6 +47,12 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
   void initState() {
     super.initState();
     _useCurrentLocation();
+  }
+
+  @override
+  void dispose() {
+    _mapController?.dispose();
+    super.dispose();
   }
 
   Future<void> _useCurrentLocation() async {
@@ -69,7 +74,7 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
       final pos = await Geolocator.getCurrentPosition();
       final target = LatLng(pos.latitude, pos.longitude);
       setState(() => _center = target);
-      _mapController.move(target, 16);
+      _mapController?.animateCamera(CameraUpdate.newLatLngZoom(target, 16));
     } catch (e) {
       setState(() => _error = e.toString());
     } finally {
@@ -121,24 +126,15 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
       appBar: AppBar(title: Text(AppLocalizations.of(context)!.pinYourLocation)),
       body: Stack(
         children: [
-          FlutterMap(
-            mapController: _mapController,
-            options: MapOptions(
-              initialCenter: _center,
-              initialZoom: 15,
-              onPositionChanged: (pos, hasGesture) {
-                if (hasGesture) _center = pos.center;
-              },
-            ),
-            children: [
-              TileLayer(
-                urlTemplate: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
-                userAgentPackageName: 'com.foodexpress.customer_app',
-              ),
-              const RichAttributionWidget(
-                attributions: [TextSourceAttribution('OpenStreetMap contributors')],
-              ),
-            ],
+          GoogleMap(
+            initialCameraPosition: CameraPosition(target: _center, zoom: 15),
+            onMapCreated: (controller) => _mapController = controller,
+            // Center-fixed-pin pattern (see the overlay icon below) needs
+            // the raw camera target as it moves, same idea as
+            // flutter_map's onPositionChanged used to give directly.
+            onCameraMove: (pos) => _center = pos.target,
+            myLocationButtonEnabled: false,
+            zoomControlsEnabled: false,
           ),
           // Fixed center pin - the map moves underneath it, which is the
           // standard "drag map to place pin" pattern and avoids the pin

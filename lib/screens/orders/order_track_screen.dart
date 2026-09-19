@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'dart:async';
-import 'package:flutter_map/flutter_map.dart';
-import 'package:latlong2/latlong.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
 import '../../services/order_service.dart';
 import '../../services/review_service.dart';
 import '../../models/order.dart';
@@ -9,9 +8,7 @@ import '../../theme.dart';
 import '../../l10n/app_localizations.dart';
 import '../chat/chat_screen.dart';
 
-/// Order tracking screen with a live map (matches the website, which uses
-/// Leaflet + OpenStreetMap - no API key needed, so we mirror that here
-/// with flutter_map instead of requiring a Google Maps key).
+/// Order tracking screen with a live map.
 class OrderTrackScreen extends StatefulWidget {
   final String orderCode;
   const OrderTrackScreen({super.key, required this.orderCode});
@@ -23,8 +20,7 @@ class OrderTrackScreen extends StatefulWidget {
 class _OrderTrackScreenState extends State<OrderTrackScreen> {
   late Future<OrderTrackingInfo> _future;
   Timer? _poll;
-  final MapController _mapController = MapController();
-  bool _mapReady = false;
+  GoogleMapController? _mapController;
   bool _cancelling = false;
 
   static const _stages = ['placed', 'confirmed', 'preparing', 'picked_up', 'out_for_delivery', 'delivered'];
@@ -44,11 +40,11 @@ class _OrderTrackScreenState extends State<OrderTrackScreen> {
     final future = OrderService.track(widget.orderCode);
     setState(() => _future = future);
     future.then((info) {
-      if (!mounted || !_mapReady) return;
+      if (!mounted || _mapController == null) return;
       final lat = info.lat ?? info.restaurantLat;
       final lng = info.lng ?? info.restaurantLng;
       if (lat != null && lng != null) {
-        _mapController.move(LatLng(lat, lng), _mapController.camera.zoom);
+        _mapController!.animateCamera(CameraUpdate.newLatLng(LatLng(lat, lng)));
       }
     }).catchError((_) {});
   }
@@ -56,6 +52,7 @@ class _OrderTrackScreenState extends State<OrderTrackScreen> {
   @override
   void dispose() {
     _poll?.cancel();
+    _mapController?.dispose();
     super.dispose();
   }
 
@@ -180,13 +177,12 @@ class _OrderTrackScreenState extends State<OrderTrackScreen> {
                   ),
                 ),
               _TrackingMap(
-                mapController: _mapController,
                 partnerLat: info.lat,
                 partnerLng: info.lng,
                 restaurantLat: info.restaurantLat,
                 restaurantLng: info.restaurantLng,
-                onReady: () {
-                  _mapReady = true;
+                onMapCreated: (controller) {
+                  _mapController = controller;
                 },
               ),
               const SizedBox(height: 16),
@@ -343,20 +339,18 @@ class _OrderItemRow extends StatelessWidget {
 }
 
 class _TrackingMap extends StatelessWidget {
-  final MapController mapController;
   final double? partnerLat;
   final double? partnerLng;
   final double? restaurantLat;
   final double? restaurantLng;
-  final VoidCallback onReady;
+  final ValueChanged<GoogleMapController> onMapCreated;
 
   const _TrackingMap({
-    required this.mapController,
     required this.partnerLat,
     required this.partnerLng,
     required this.restaurantLat,
     required this.restaurantLng,
-    required this.onReady,
+    required this.onMapCreated,
   });
 
   @override
@@ -379,41 +373,28 @@ class _TrackingMap extends StatelessWidget {
       borderRadius: BorderRadius.circular(12),
       child: SizedBox(
         height: 150,
-        child: FlutterMap(
-          mapController: mapController,
-          options: MapOptions(
-            initialCenter: center,
-            initialZoom: 16,
-            onMapReady: onReady,
-            interactionOptions: const InteractionOptions(flags: InteractiveFlag.pinchZoom | InteractiveFlag.drag),
-          ),
-          children: [
-            TileLayer(
-              urlTemplate: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
-              userAgentPackageName: 'com.foodexpress.customer_app',
-            ),
-            MarkerLayer(
-              markers: [
-                if (hasRestaurant)
-                  Marker(
-                    point: LatLng(restaurantLat!, restaurantLng!),
-                    width: 36,
-                    height: 36,
-                    child: const Icon(Icons.storefront, color: AppTheme.primary, size: 32),
-                  ),
-                if (hasPartner)
-                  Marker(
-                    point: LatLng(partnerLat!, partnerLng!),
-                    width: 36,
-                    height: 36,
-                    child: const Icon(Icons.delivery_dining, color: Colors.red, size: 32),
-                  ),
-              ],
-            ),
-            const RichAttributionWidget(
-              attributions: [TextSourceAttribution('OpenStreetMap contributors')],
-            ),
-          ],
+        child: GoogleMap(
+          initialCameraPosition: CameraPosition(target: center, zoom: 16),
+          onMapCreated: onMapCreated,
+          zoomControlsEnabled: false,
+          myLocationButtonEnabled: false,
+          markers: {
+            if (hasRestaurant)
+              Marker(
+                markerId: const MarkerId('restaurant'),
+                position: LatLng(restaurantLat!, restaurantLng!),
+                // google_maps_flutter's Marker can't take an arbitrary
+                // widget the way flutter_map's could (Icons.storefront) -
+                // its own colored pin is the standard substitute.
+                icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueOrange),
+              ),
+            if (hasPartner)
+              Marker(
+                markerId: const MarkerId('partner'),
+                position: LatLng(partnerLat!, partnerLng!),
+                icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed),
+              ),
+          },
         ),
       ),
     );

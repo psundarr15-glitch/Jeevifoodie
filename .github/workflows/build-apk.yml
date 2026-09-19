@@ -18,6 +18,41 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
+      # This project has no dedicated release signing config (Flutter's
+      # own template leaves that as a TODO in build.gradle.kts), so
+      # `flutter build apk --release` below signs with the debug
+      # keystore. That keystore doesn't exist on a fresh runner, so
+      # without caching it Gradle would silently generate a brand new
+      # one on every single build - fine for local dev, but it means the
+      # APK's SHA-1 fingerprint (what Google Cloud Console restricts a
+      # Maps/Places/Sign-In API key to) would change on every rebuild,
+      # breaking that restriction each time. Caching keeps the same
+      # keystore (and SHA-1) forever after the first run.
+      - name: Cache/restore debug keystore
+        uses: actions/cache@v4
+        with:
+          path: ~/.android/debug.keystore
+          key: android-debug-keystore-v1
+
+      - name: Ensure debug keystore exists
+        run: |
+          mkdir -p ~/.android
+          if [ ! -f ~/.android/debug.keystore ]; then
+            keytool -genkey -v -keystore ~/.android/debug.keystore -storepass android \
+              -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 \
+              -validity 10000 -dname "CN=Android Debug,O=Android,C=US"
+          fi
+
+      # Package name + SHA-1 are what Google Cloud Console needs to
+      # restrict an Android API key (Maps SDK, Places, etc.) to this
+      # app. Package name is always com.foodexpress.customer_app (set
+      # by "Ensure Android platform files exist" below); grab the SHA-1
+      # from this step's log output (look for the "SHA1:" line).
+      - name: Print SHA-1 fingerprint (for Google Cloud Console API key restrictions)
+        run: |
+          echo "Package name: com.foodexpress.customer_app"
+          keytool -list -v -keystore ~/.android/debug.keystore -storepass android -alias androiddebugkey | grep "SHA1:"
+
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
         with:
@@ -117,6 +152,30 @@ jobs:
             sed -i 's#</application>#    <meta-data android:name="com.google.firebase.messaging.default_notification_icon" android:resource="@drawable/ic_stat_notify" />\n</application>#' "$MANIFEST"
           fi
           cat "$MANIFEST"
+
+      # google_maps_flutter (location_picker_screen.dart, add_address_screen.dart,
+      # order_track_screen.dart) needs a Maps SDK for Android key here, or the
+      # map renders as a blank grey tile with a "For development purposes
+      # only" watermark. Get one from Google Cloud Console -> APIs & Services
+      # -> Credentials -> Create API key, then restrict it to Android apps
+      # using this run's package name + SHA-1 (see "Print SHA-1 fingerprint"
+      # step above for both).
+      #
+      # Setup (one-time): Repo -> Settings -> Secrets and variables ->
+      # Actions -> New repository secret -> name it GOOGLE_MAPS_API_KEY,
+      # paste the key as the value.
+      - name: Set Google Maps API key
+        env:
+          GOOGLE_MAPS_API_KEY: ${{ secrets.GOOGLE_MAPS_API_KEY }}
+        run: |
+          MANIFEST=android/app/src/main/AndroidManifest.xml
+          if [ -z "$GOOGLE_MAPS_API_KEY" ]; then
+            echo "GOOGLE_MAPS_API_KEY secret not set - maps will render blank/watermarked until it's added. See build-apk.yml comments for setup steps."
+            exit 0
+          fi
+          if ! grep -q "com.google.android.geo.API_KEY" "$MANIFEST"; then
+            sed -i "s#</application>#    <meta-data android:name=\"com.google.android.geo.API_KEY\" android:value=\"$GOOGLE_MAPS_API_KEY\" />\n</application>#" "$MANIFEST"
+          fi
 
       # file_picker pulls in flutter_plugin_android_lifecycle, which now
       # requires apps to compile against Android API 36 or later. The
