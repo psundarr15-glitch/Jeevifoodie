@@ -59,7 +59,22 @@ class ApiClient {
   }
 
   static Future<Map<String, dynamic>> get(String url) async {
-    final res = await http.get(Uri.parse(url), headers: await _headers()).timeout(_apiTimeout);
+    http.Response res;
+    try {
+      res = await http.get(Uri.parse(url), headers: await _headers()).timeout(_apiTimeout);
+    } on SocketException {
+      throw ApiException('No internet connection. Please check your network and try again.', 0);
+    } on TimeoutException {
+      throw ApiException('The request took too long. Please try again.', 0);
+    } on http.ClientException {
+      // Covers a mid-request connection drop that isn't cleanly a
+      // SocketException on every platform (e.g. "Software caused
+      // connection abort" from a server/proxy that reset the
+      // connection) - same friendly message as the no-internet case,
+      // since from the user's side it looks identical: the request
+      // just didn't go through.
+      throw ApiException('Could not reach the server. Please check your network and try again.', 0);
+    }
     return _decode(res);
   }
 
@@ -69,7 +84,16 @@ class ApiClient {
       if (v != null) body[k] = v.toString();
     });
 
-    final res = await http.post(Uri.parse(url), headers: await _headers(), body: body).timeout(_apiTimeout);
+    http.Response res;
+    try {
+      res = await http.post(Uri.parse(url), headers: await _headers(), body: body).timeout(_apiTimeout);
+    } on SocketException {
+      throw ApiException('No internet connection. Please check your network and try again.', 0);
+    } on TimeoutException {
+      throw ApiException('The request took too long. Please try again.', 0);
+    } on http.ClientException {
+      throw ApiException('Could not reach the server. Please check your network and try again.', 0);
+    }
     return _decode(res);
   }
 
@@ -104,6 +128,8 @@ class ApiClient {
       throw ApiException('No internet connection. Please check your network and try again.', 0);
     } on TimeoutException {
       throw ApiException('The upload took too long. Please try again.', 0);
+    } on http.ClientException {
+      throw ApiException('Could not reach the server. Please check your network and try again.', 0);
     }
     final res = await http.Response.fromStream(streamed);
     return _decode(res);
