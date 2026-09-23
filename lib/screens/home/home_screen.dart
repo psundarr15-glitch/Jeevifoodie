@@ -16,6 +16,7 @@ import '../../state/app_state.dart';
 import '../../utils/cart_restaurant_guard.dart';
 import '../../widgets/quantity_stepper.dart';
 import '../../widgets/restaurant_card.dart';
+import '../../widgets/animations.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -775,44 +776,50 @@ class _ModernCategoryRow extends StatelessWidget {
             const SizedBox(width: 15),
         itemBuilder: (_, i) {
           if (i == shown.length) {
-            return _ModernCategoryItem(
+            return FadeSlideIn(
+              index: i,
+              child: _ModernCategoryItem(
+                label:
+                    AppLocalizations.of(context)!
+                        .more,
+                icon: null,
+                fallbackIcon:
+                    Icons.grid_view_rounded,
+                isMore: true,
+                onTap: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) =>
+                          const RestaurantListScreen(),
+                    ),
+                  );
+                },
+              ),
+            );
+          }
+
+          return FadeSlideIn(
+            index: i,
+            child: _ModernCategoryItem(
               label:
-                  AppLocalizations.of(context)!
-                      .more,
-              icon: null,
+                  shown[i].displayName(context),
+              icon: shown[i].icon,
               fallbackIcon:
-                  Icons.grid_view_rounded,
-              isMore: true,
+                  _fallbackIcons[
+                      i %
+                          _fallbackIcons.length],
               onTap: () {
                 Navigator.of(context).push(
                   MaterialPageRoute(
                     builder: (_) =>
-                        const RestaurantListScreen(),
+                        RestaurantListScreen(
+                      initialQuery:
+                          shown[i].name,
+                    ),
                   ),
                 );
               },
-            );
-          }
-
-          return _ModernCategoryItem(
-            label:
-                shown[i].displayName(context),
-            icon: shown[i].icon,
-            fallbackIcon:
-                _fallbackIcons[
-                    i %
-                        _fallbackIcons.length],
-            onTap: () {
-              Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (_) =>
-                      RestaurantListScreen(
-                    initialQuery:
-                        shown[i].name,
-                  ),
-                ),
-              );
-            },
+            ),
           );
         },
       ),
@@ -837,7 +844,7 @@ class _ModernCategoryItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
+    return TapScale(
       onTap: onTap,
       child: SizedBox(
         width: 72,
@@ -950,21 +957,24 @@ class _RestaurantHorizontalList extends StatelessWidget {
           final restaurant =
               restaurants[i];
 
-          return RestaurantCard(
-            restaurant: restaurant,
-            isNew: isNew,
-            width: 225,
-            onTap: () {
-              Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (_) =>
-                      RestaurantMenuScreen(
-                    restaurantId:
-                        restaurant.id,
+          return FadeSlideIn(
+            index: i,
+            child: RestaurantCard(
+              restaurant: restaurant,
+              isNew: isNew,
+              width: 225,
+              onTap: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) =>
+                        RestaurantMenuScreen(
+                      restaurantId:
+                          restaurant.id,
+                    ),
                   ),
-                ),
-              );
-            },
+                );
+              },
+            ),
           );
         },
       ),
@@ -1069,14 +1079,18 @@ class _PopularFoodListState extends State<_PopularFoodList> {
         itemBuilder: (_, i) {
           final item = widget.items[i];
           final q = _qty[item.id] ?? 0;
-          return _ModernFoodCard(
-            item: item,
-            quantity: q,
-            busy: _busy.contains(item.id),
-            onAdd: () => _add(item),
-            onDecrease: () => _change(item, -1),
-            onIncrease: () => _change(item, 1),
-            onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => RestaurantMenuScreen(restaurantId: item.restaurantId))),
+          return FadeSlideIn(
+            key: ValueKey(item.id),
+            index: i,
+            child: _ModernFoodCard(
+              item: item,
+              quantity: q,
+              busy: _busy.contains(item.id),
+              onAdd: () => _add(item),
+              onDecrease: () => _change(item, -1),
+              onIncrease: () => _change(item, 1),
+              onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => RestaurantMenuScreen(restaurantId: item.restaurantId))),
+            ),
           );
         },
       ),
@@ -1338,9 +1352,12 @@ class _DealsList extends StatelessWidget {
         separatorBuilder: (_, __) =>
             const SizedBox(width: 12),
         itemBuilder: (_, i) {
-          return _ModernDealCard(
-            coupon: coupons[i],
+          return FadeSlideIn(
             index: i,
+            child: _ModernDealCard(
+              coupon: coupons[i],
+              index: i,
+            ),
           );
         },
       ),

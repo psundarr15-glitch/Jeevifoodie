@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'widgets/animations.dart';
 
 /// Jeevi Foodie premium design system, matched to the "Jeevi Foodie"
 /// red/yellow/white logo: a strong appetizing red as the primary brand
@@ -126,6 +127,12 @@ class AppTheme {
       scaffoldBackgroundColor: canvas,
       visualDensity: VisualDensity.standard,
       splashFactory: InkSparkle.splashFactory,
+      // Same gentle fade+slide on every screen push/pop, on both
+      // platforms, instead of the stock Material transition.
+      pageTransitionsTheme: const PageTransitionsTheme(builders: {
+        TargetPlatform.android: SmoothPageTransitionsBuilder(),
+        TargetPlatform.iOS: SmoothPageTransitionsBuilder(),
+      }),
       appBarTheme: const AppBarTheme(
         backgroundColor: canvas,
         foregroundColor: ink,
@@ -265,6 +272,10 @@ class AppTheme {
       brightness: Brightness.dark,
       scaffoldBackgroundColor: const Color(0xFF141110),
       colorScheme: ColorScheme.fromSeed(seedColor: primary, primary: primary, brightness: Brightness.dark),
+      pageTransitionsTheme: const PageTransitionsTheme(builders: {
+        TargetPlatform.android: SmoothPageTransitionsBuilder(),
+        TargetPlatform.iOS: SmoothPageTransitionsBuilder(),
+      }),
       appBarTheme: const AppBarTheme(
         elevation: 0,
         scrolledUnderElevation: 0,

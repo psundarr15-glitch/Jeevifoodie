@@ -110,7 +110,14 @@ class _RootShellState extends State<RootShell> {
                         ),
                         child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
                           Stack(clipBehavior: Clip.none, children: [
-                            Icon(selected ? item.$1 : item.$2, size: 23, color: selected ? AppTheme.primary : AppTheme.muted),
+                            TweenAnimationBuilder<double>(
+                              key: ValueKey('nav-icon-$i-$selected'),
+                              tween: Tween(begin: selected ? 0.7 : 1.0, end: 1.0),
+                              duration: const Duration(milliseconds: 280),
+                              curve: Curves.elasticOut,
+                              builder: (context, scale, child) => Transform.scale(scale: scale, child: child),
+                              child: Icon(selected ? item.$1 : item.$2, size: 23, color: selected ? AppTheme.primary : AppTheme.muted),
+                            ),
                             if (i == 3 && cartCount > 0)
                               Positioned(
                                 right: -8,
